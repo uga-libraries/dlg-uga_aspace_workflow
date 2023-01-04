@@ -12,8 +12,8 @@ client = ASnakeClient(baseurl=as_api, username=as_un, password=as_pw)
 try:
     client.authorize()
 except ASnakeAuthError as e:
-    error_message = ''
-    if ':' in str(e):
+    error_message = ""
+    if ":" in str(e):
         error_divided = str(e).split(":")
         for line in error_divided:
             error_message += line + "\n"
@@ -26,9 +26,9 @@ except ASnakeAuthError as e:
 # 3rd step - code takes spreadsheet, searches for top containers on ASpace
 
 barcode = 32108050893687
-search_tcs = json.loads(client.get('repositories/4/top_containers/search',
-                                   params={'q': f'barcode_u_sstr:{barcode}',
-                                           'type[]': '["top_container"]'}).text)
+search_tcs = json.loads(client.get("repositories/4/top_containers/search",
+                                   params={"q": f"barcode_u_sstr:{barcode}",
+                                           "type[]": "['top_container']"}).text)
 tc_json = json.loads(search_tcs['response']['docs'][0]['json'])
 print(tc_json['collection'])
 results = [result['uri'] for result in search_tcs['response']['docs']]
@@ -44,6 +44,6 @@ else:
 # use https://archivesspace.github.io/archivesspace/api/?shell#fetch-tree-information-for-the-top-level-resource-record - go through each archival object?
 for tc_uri in results:
     print(tc_uri)
-    search_aos = client.get_paged(f'repositories/4/search', params={'filter_term[]': f'top_container_uri_u_sstr: {tc_uri}', 'type': ['archival_object']})
+    search_aos = client.get_paged(f'repositories/4/search', params={"filter_term[]": f'top_container_uri_u_sstr: {tc_uri}', 'type': ['archival_object']})
     ao_results = [result for result in search_aos]
     print(len(ao_results))  # 322873 - it's grabbing all archival objects

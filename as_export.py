@@ -26,7 +26,8 @@ except ASnakeAuthError as e:
 # 3rd step - code takes spreadsheet, searches for top containers on ASpace
 
 barcode = 32108050893687
-search_tcs = json.loads(client.get('repositories/4/top_containers/search',
+repository = 4
+search_tcs = json.loads(client.get(f'repositories/{repository}/top_containers/search',
                                    params={'q': f'barcode_u_sstr:{barcode}',
                                            'type[]': '["top_container"]'}).text)
 tc_json = json.loads(search_tcs['response']['docs'][0]['json'])
@@ -44,6 +45,6 @@ else:
 # use https://archivesspace.github.io/archivesspace/api/?shell#fetch-tree-information-for-the-top-level-resource-record - go through each archival object?
 for tc_uri in results:
     print(tc_uri)
-    search_aos = client.get_paged(f'repositories/4/search', params={'filter_term[]': f'top_container_uri_u_sstr: {tc_uri}', 'type': ['archival_object']})
+    search_aos = client.get_paged(f'repositories/4/search', params={'q': f'{barcode}', 'type': ['archival_object']})
     ao_results = [result for result in search_aos]
-    print(len(ao_results))  # 322873 - it's grabbing all archival objects
+    print(len(ao_results))  # This seems to grab all 27 associated archival objects

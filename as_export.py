@@ -1,4 +1,5 @@
 import json
+import urllib.parse
 import asnake.logging as logging
 
 from secrets import *
@@ -26,7 +27,6 @@ class ASpace:
         try:
             self.client = ASnakeClient(baseurl=as_api, username=as_un, password=as_pw)
             self.client.authorize()
-            status = 200
         except ASnakeAuthError as e:
             print(e)
             error_message = ''
@@ -36,7 +36,7 @@ class ASpace:
                 for line in error_divided:
                     error_message += line + "\n"
             print(error_message)
-        return status
+        return self.client
 
     # 2nd step - user inputs a spreadsheet of top containers with barcodes or top_container ASpace URI
 
@@ -58,13 +58,29 @@ class ASpace:
             print(f'No results found for {barcode}')
         else:
             print(results)
+        return results
 
     # 4th step - get archival objects associated with top containers - use collection ref (URI) to narrow searching for archival objects within collection
     # use https://archivesspace.github.io/archivesspace/api/?shell#fetch-tree-information-for-the-top-level-resource-record - go through each archival object?
 
-    def get_archobjs(self, barcode, repository):
+    def get_archobjs(self, results):
         barcode = 32108050893687  # use these for unittests
         repository = 4  # use these for unittests
-        search_aos = self.client.get_paged(f'repositories/{repository}/search', params={'q': f'{barcode}', 'type': ['archival_object']})
-        ao_results = [result for result in search_aos]
-        print(len(ao_results), ao_results)  # This seems to grab all 27 associated archival objects
+        # search_aos = self.client.get_paged(f'repositories/{repository}/search', params={'q': f'{barcode}', 'type': ['archival_object']})
+        # ao_results = [result for result in search_aos]
+        # print(len(ao_results), ao_results)  # This seems to grab all 27 associated archival objects
+        for tc_uri in results:
+            print(tc_uri)  # /repositories/4/top_containers/45245
+            encoded_uri = urllib.parse.quote(tc_uri, 'UTF-8')  # tried utf8
+            print(encoded_uri)  # %2Frepositories%2F4%2Ftop_containers%2F45245
+            search_aos = self.client.get_paged(f'repositories/4/search',
+                                               params={'filter_term[]': f'top_container_uri_u_sstr: {encoded_uri}',
+                                                       'type': ['archival_object']})
+            ao_results = [result for result in search_aos]
+            print(len(ao_results), ao_results[0])  # 322873 - it's grabbing all archival objects, filter_query returns 0
+
+
+aspace_connection = ASpace(as_un, as_pw, as_api)
+aspace_connection.aspace_login()
+tc_uri = aspace_connection.get_tcuri()
+aspace_connection.get_archobjs(tc_uri)

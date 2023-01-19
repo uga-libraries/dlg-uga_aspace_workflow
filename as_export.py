@@ -1,4 +1,5 @@
 import json
+import requests
 import urllib.parse
 import asnake.logging as logging
 
@@ -18,25 +19,44 @@ class ASpace:
         """str: ArchivesSpace API URL provided by user"""
         self.client = None
         """str: ArchivesSnake client as created through ASnakeClient"""
+        self.repositories = None
+        """dict: All repositories in an ArchivesSpace instance, key = name, value = repo ID #"""
 
     # 1st step - user login to ASpace with creds
+    def test_api(self):
+        api_message = ''
+        try:
+            requests.get(self.api)
+        except Exception as api_error:
+            api_message = "Your API credentials were entered incorrectly.\nPlease try again.\n\n" + \
+                            api_error.__str__()
+        return api_message
 
     def aspace_login(self):
 
         # logging.setup_logging(level='DEBUG')
+        error_message = None
         try:
             self.client = ASnakeClient(baseurl=as_api, username=as_un, password=as_pw)
             self.client.authorize()
-        except ASnakeAuthError as e:
-            print(e)
-            error_message = ''
-            if ':' in str(e):
-                error_divided = str(e).split(":")
-                status = int(error_divided[1])
+        except ASnakeAuthError as connection_error:
+            error_message = 'Your username and/or password were entered\n incorrectly. Please try again.\n\n'
+            if ':' in str(connection_error):
+                error_divided = str(connection_error).split(":")
                 for line in error_divided:
                     error_message += line + "\n"
-            print(error_message)
-        return self.client
+            else:
+                error_message = str(connection_error)
+        return error_message
+
+    def get_repos(self):
+        self.repositories = {}
+        repo_results = self.client.get('/repositories')
+        repo_results_dec = json.loads(repo_results.content.decode())
+        for result in repo_results_dec:
+            uri_components = result["uri"].split("/")
+            self.repositories[result["name"]] = int(uri_components[-1])
+        return self.repositories
 
     # 2nd step - user inputs a spreadsheet of top containers with barcodes or top_container ASpace URI
 
@@ -80,7 +100,7 @@ class ASpace:
             print(len(ao_results), ao_results[0])  # 322873 - it's grabbing all archival objects, filter_query returns 0
 
 
-aspace_connection = ASpace(as_un, as_pw, as_api)
-aspace_connection.aspace_login()
-tc_uri = aspace_connection.get_tcuri()
-aspace_connection.get_archobjs(tc_uri)
+# aspace_connection = ASpace(as_un, as_pw, as_api)
+# aspace_connection.aspace_login()
+# tc_uri = aspace_connection.get_tcuri()
+# aspace_connection.get_archobjs(tc_uri)

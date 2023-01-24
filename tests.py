@@ -1,12 +1,12 @@
 import unittest
-import as_export
+import aspace
 from asnake.client import ASnakeClient
-from as_export import *
+from aspace import *
 from secrets import *
 
 
 class TestASpaceFunctions(unittest.TestCase):
-    local_aspace = as_export.ASpace(as_un, as_pw, as_api)
+    local_aspace = aspace.ASpace(as_un, as_pw, as_api)
 
     def test_aspace_connection(self):
         self.local_aspace.aspace_login()

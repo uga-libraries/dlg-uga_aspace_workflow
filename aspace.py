@@ -88,7 +88,8 @@ class ASpace:
         repository = 4  # use these for unittests
         # search_aos = self.client.get_paged(f'repositories/{repository}/search', params={'q': f'{barcode}', 'type': ['archival_object']})
         # ao_results = [result for result in search_aos]
-        # print(len(ao_results), ao_results)  # This seems to grab all 27 associated archival objects
+        # print(len(ao_results))
+        # print(ao_results[0])  # This seems to grab all 27 associated archival objects
         for tc_uri in results:
             print(tc_uri)  # /repositories/4/top_containers/45245
             encoded_uri = urllib.parse.quote(tc_uri, 'UTF-8')  # tried utf8
@@ -100,7 +101,53 @@ class ASpace:
             print(len(ao_results), ao_results[0])  # 322873 - it's grabbing all archival objects, filter_query returns 0
 
 
-# aspace_connection = ASpace(as_un, as_pw, as_api)
-# aspace_connection.aspace_login()
-# tc_uri = aspace_connection.get_tcuri()
-# aspace_connection.get_archobjs(tc_uri)
+aspace_connection = ASpace(as_un, as_pw, as_api)
+aspace_connection.aspace_login()
+tc_uri = aspace_connection.get_tcuri()
+aspace_connection.get_archobjs(tc_uri)
+
+
+class ArchivalObject:
+
+    def __init__(self, archival_object):
+        self.arch_obj = archival_object
+        """str: Dictionary of archival object metadata"""
+        self.title = ""
+        """str: Title of the archival object"""
+        self.creator = ""  # need to get this from get_resource_info()
+        """str: Creator(s) of the collection, multiple separated by | |"""
+        self.subject = ""  # need to get this from get_resource_info()
+        """str: Subject terms for resource, multiple separated by | |"""
+        self.description = ""
+        """str: Description of the archival object, found in scope and content note"""
+        self.date = ""
+        """str: Date of the archival object, formatted YYYY-MM-DD, YYYY-MM, YYYY or YYYY/YYYY"""
+        self.subject_spatial = ""  # need to get this from get_resource_info()
+        """str: Subjects geographic/spatial of the resource, multiple separated by | |"""
+        self.subject_medium = ""  # need to get this from get_resource_info()
+        """str: Subjects medium/genre/format of the resource, multiple separated by | |"""
+        self.extent = ""
+        """str: Extent note of the archival object, if available"""
+        self.language = ""  # need to get this from get_resource_info()
+        """str: Language of material of the resource, usually eng"""
+        self.citation = ""
+        """str: Preferred citation of the resource"""
+        self.subject_personal = ""  # need to get this from get_resource_info()
+        """str: Subject person of the resource, multiple separated by | |"""
+
+    def parse_archobj(self):
+
+        self.title = ""
+        self.creator = ""  # need to get this from get_resource_info()
+        self.subject = ""  # need to get this from get_resource_info()
+        self.description = ""
+        self.date = ""
+        self.subject_spatial = ""  # need to get this from get_resource_info()
+        self.subject_medium = ""  # need to get this from get_resource_info()
+        self.extent = ""
+        self.language = ""  # need to get this from get_resource_info()
+        self.citation = ""
+        self.subject_personal = ""  # need to get this from get_resource_info()
+
+    def get_resource_info(self):
+        pass

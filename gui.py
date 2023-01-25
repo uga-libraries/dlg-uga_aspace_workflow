@@ -3,6 +3,7 @@ import aspace as asx
 import gc
 import os
 import PySimpleGUI as psg
+import spreadsheet
 import threading
 import time
 
@@ -36,7 +37,7 @@ def run_gui(defaults):
                psg.Button(" SAVE ", key="_SAVE_REPO_")],
               [psg.FileBrowse(' Select Top Container File ',
                               file_types=(("Excel Files", "*.xlsx"),),),
-               psg.InputText(key='_DO_FILE_')],
+               psg.InputText(key='_TC_FILE_')],
               [psg.FileBrowse(' Select ASpace>DLG Template ', file_types=(("Excel Files", "*.xlsx"),),),
                psg.InputText(default_text=defaults['_AS-DLG_FILE_'], key='_AS-DLG_FILE_')],
               [psg.Button(' START ', key='_WRITE_AOS_', disabled=False)],
@@ -59,14 +60,14 @@ def run_gui(defaults):
             #  2: take list of barcodes and feed them into aspace to get tc_uris or list of archival objects
             #  3: for loop through list of archival objects - instance of ArchivalObject pass to spreadsheet.py and
             #  write data - will have to make more calls to aspace to get resource level info.
-
-            barcodes = spreadsheet.get_barcodes
-            for barcode in barcodes:
-                linked_objects = aspace_instance.get_archobjs()
-                for linked_object in linked_objects:
-                    archival_object = aspace.ArchivalObject(linked_object)
-                    spreadsheet.write_template(archival_object)
-            pass
+            ss_inst = spreadsheet.Spreadsheet
+            barcodes = ss_inst.get_barcodes(main_values['_TC_FILE_'])
+            # for barcode in barcodes:
+            #     linked_objects = aspace_instance.get_archobjs()
+            #     for linked_object in linked_objects:
+            #         archival_object = aspace.ArchivalObject(linked_object)
+            #         spreadsheet.write_template(archival_object)
+            # pass
 
 
 def get_aspace_login(defaults):

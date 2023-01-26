@@ -9,6 +9,7 @@ class Spreadsheet:
     #      data to the template
     pass
 
+    @staticmethod
     def get_barcodes(tc_spreadsheet):
         barcodes = []
         with open(tc_spreadsheet, newline='') as csvfile:
@@ -27,6 +28,10 @@ class Spreadsheet:
                 barcodes.append(row[barcode_col])
             barcodes.pop(0)
         return barcodes
+
+    def write_template(self):
+        # fill in here when we need to write data to DLG template spreadsheet
+        pass
 
         # tc_wb = load_workbook(tc_spreadsheet, data_only=True)
         # print(tc_wb)

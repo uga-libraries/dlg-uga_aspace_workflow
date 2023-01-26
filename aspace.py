@@ -101,10 +101,10 @@ class ASpace:
             print(len(ao_results), ao_results[0])  # 322873 - it's grabbing all archival objects, filter_query returns 0
 
 
-aspace_connection = ASpace(as_un, as_pw, as_api)
-aspace_connection.aspace_login()
-tc_uri = aspace_connection.get_tcuri()
-aspace_connection.get_archobjs(tc_uri)
+# aspace_connection = ASpace(as_un, as_pw, as_api)
+# aspace_connection.aspace_login()
+# tc_uri = aspace_connection.get_tcuri()
+# aspace_connection.get_archobjs(tc_uri)
 
 
 class ArchivalObject:

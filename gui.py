@@ -15,7 +15,7 @@ logger.add(str(Path('logs', 'log_{time:YYYY-MM-DD}.log')),
            format="{time}-{level}: {message}")
 
 
-def run_gui(defaults):
+def run_gui():
     """
     Handles the GUI operation as outlined by PySimpleGUI's guidelines.
 
@@ -23,7 +23,7 @@ def run_gui(defaults):
     https://github.com/uga-libraries/ASpace_Batch_Export-Cleanup-Upload/wiki/Code-Structure#run_gui
 
     Args:
-        defaults (dict): contains the data from defaults.json file, all data the user has specified as default
+        # defaults (dict): contains the data from defaults.json file, all data the user has specified as default
 
     Returns:
         None
@@ -158,10 +158,12 @@ def delete_log_files():  # unittest for this? how?
 def start_thread(function, args, gui_window):  # TODO: implement threading so Windows doesn't try to kill the app
     """
     Starts a thread and disables buttons to prevent multiple requests/threads.
+
     Args:
         function (function): the function to pass to the thread
         args (tuple): the arguments to pass to the function with ending ,. Ex. (arg, arg, arg,)
         gui_window (PySimpleGUI object): the GUI window used by PySimpleGUI. Used to return an event
+
     Returns:
         None
     """

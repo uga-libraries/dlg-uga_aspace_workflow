@@ -1,7 +1,10 @@
 import unittest
 import aspace
 from asnake.client import ASnakeClient
+
+import gui
 from aspace import *
+from gui import *
 from secrets import *
 
 
@@ -25,6 +28,27 @@ class TestASpaceFunctions(unittest.TestCase):
         self.assertTrue(test_repositories)
 
     # test for grabbing archival objects get_archobjs
+
+
+class TestGUIFunctions(unittest.TestCase):
+
+    def test_aspace_login(self):
+        test_defaults = {"as_api": ""}
+        close, as_instance, repos = gui.get_aspace_login(test_defaults)
+        self.assertIsInstance(as_instance, ASpace)
+        self.assertIsInstance(close, bool)
+        self.assertIsInstance(repos, dict)
+        self.assertTrue(repos, dict)  # make sure repos has repos in it
+
+    def test_delete_logfiles(self):
+        current_directory = os.getcwd()
+        logs_path = Path(current_directory, "logs")
+        for file in os.listdir(logs_path):
+            logfile = Path(logs_path, file)
+            file_time = os.path.getmtime(logfile)
+            current_time = time.time()
+            delete_time = current_time - 2630000  # This is for 1 month.
+            self.assertGreaterEqual(file_time, delete_time)
 
 
 if __name__ == '__main__':

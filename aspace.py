@@ -24,6 +24,11 @@ class ASpace:
 
     # 1st step - user login to ASpace with creds
     def test_api(self):
+        """
+        Tests if the connection to the API
+
+        :returns str api_message: message indicating if an error occurred, empty string if no error
+        """
         api_message = ''
         try:
             requests.get(self.api)
@@ -33,6 +38,11 @@ class ASpace:
         return api_message
 
     def aspace_login(self):
+        """
+        Logs in to ASnake Client, returns error message if occurs
+
+        :return str error_message: error message is login error occurs, None if ok
+        """
 
         # logging.setup_logging(level='DEBUG')
         error_message = None
@@ -50,6 +60,11 @@ class ASpace:
         return error_message
 
     def get_repos(self):
+        """
+        Gets and returns a dictionary of repositories in an ASpace instance {repo_name: repo_id}
+
+        :return dict self.repositories: repositories in an ASpace instance {repo_name: repo_id}
+        """
         self.repositories = {}
         repo_results = self.client.get('/repositories')
         repo_results_dec = json.loads(repo_results.content.decode())
@@ -62,48 +77,68 @@ class ASpace:
 
     # 3rd step - code takes spreadsheet, searches for top containers on ASpace
 
-    def get_tcuri(self):
-        barcode = 32108050893687
-        repository = 4
+    def get_tcuri(self, barcode, repository):
+        """
+        Gets the top container URI for a specific barcode in an ASpace repository
+
+        :param int barcode: of the barcode of the top container to search for
+        :param int repository: integer of the repository ID to search within the ASpace instance
+
+        :return str uri_error: returns an error message if multiple or no results found, otherwise None
+        :return list tc_uri: top container URI
+        """
+        uri_error = None
         search_tcs = json.loads(self.client.get(f'repositories/{repository}/top_containers/search',
                                                 params={'q': f'barcode_u_sstr:{barcode}',
                                                         'type[]': '["top_container"]'}).text)
-        tc_json = json.loads(search_tcs['response']['docs'][0]['json'])
-        print(tc_json['collection'])
-        results = [result['uri'] for result in search_tcs['response']['docs']]
-        if len(results) > 1:
-            print('Multiple results found with same barcode')
-            print(results)
-        elif len(results) == 0:
-            print(f'No results found for {barcode}')
-        else:
-            print(results)
-        return results
+        tc_uri = [result['uri'] for result in search_tcs['response']['docs']]
+        if len(tc_uri) > 1:
+            uri_error = True
+            tc_uri.insert(0, f'Multiple results found with same barcode: {barcode}')
+        elif len(tc_uri) == 0:
+            uri_error = True
+            tc_uri.insert(0, f'No results found for: {barcode}')
+        return uri_error, tc_uri
 
     # 4th step - get archival objects associated with top containers - use collection ref (URI) to narrow searching for archival objects within collection
     # use https://archivesspace.github.io/archivesspace/api/?shell#fetch-tree-information-for-the-top-level-resource-record - go through each archival object?
 
-    def get_archobjs(self, results):
+    def get_archobjs(self, tc_uri):
+        """
+        Gets the archival objects associated with a top container
+
+        :param list tc_uri: list of the top container URI
+
+        :return list ao_results: list of all archival objects associated with the top container
+        """
         barcode = 32108050893687  # use these for unittests
         repository = 4  # use these for unittests
-        # search_aos = self.client.get_paged(f'repositories/{repository}/search', params={'q': f'{barcode}', 'type': ['archival_object']})
-        # ao_results = [result for result in search_aos]
-        # print(len(ao_results))
-        # print(ao_results[0])  # This seems to grab all 27 associated archival objects
-        for tc_uri in results:
-            print(tc_uri)  # /repositories/4/top_containers/45245
-            encoded_uri = urllib.parse.quote(tc_uri, 'UTF-8')  # tried utf8
-            print(encoded_uri)  # %2Frepositories%2F4%2Ftop_containers%2F45245
-            search_aos = self.client.get_paged(f'repositories/4/search',
-                                               params={'filter_term[]': f'top_container_uri_u_sstr: {encoded_uri}',
-                                                       'type': ['archival_object']})
-            ao_results = [result for result in search_aos]
-            print(len(ao_results), ao_results[0])  # 322873 - it's grabbing all archival objects, filter_query returns 0
+        ao_results = None
+        search_aos = self.client.get_paged(f'repositories/{repository}/search', params={'q': f'{barcode}', 'type': ['archival_object']})
+        print(type(search_aos), search_aos)
+        # Above for testing purposes only, unless we have to use instead of filter_term query
+        ao_results = [result for result in search_aos]
+        print(len(ao_results))
+        print(f'Length: {len(ao_results[0])}\n{ao_results[0]["id"]}\n\n')  # This seems to grab all 27 associated archival objects
+
+
+        # for top_cont in tc_uri:
+        #     print(tc_uri)  # /repositories/4/top_containers/45245
+        #     encoded_uri = urllib.parse.quote(tc_uri, 'UTF-8')  # tried utf8
+        #     print(encoded_uri)  # %2Frepositories%2F4%2Ftop_containers%2F45245
+            # search_aos = self.client.get_paged(f'repositories/4/search',
+            #                                    params={'filter_term[]': f'top_container_uri_u_sstr: {encoded_uri}',
+            #                                            'type': ['archival_object']})
+            # ao_results = [result for result in search_aos]
+            # print(len(ao_results), ao_results[0])  # 322873 - it's grabbing all archival objects, filter_query returns 0
+        return ao_results
 
 
 # aspace_connection = ASpace(as_un, as_pw, as_api)
 # aspace_connection.aspace_login()
-# tc_uri = aspace_connection.get_tcuri()
+# barcode = 32108050893687  # use these for unittests
+# repository = 4  # use these for unittests
+# tc_uri = aspace_connection.get_tcuri(barcode, repository)
 # aspace_connection.get_archobjs(tc_uri)
 
 
@@ -137,7 +172,7 @@ class ArchivalObject:
 
     def parse_archobj(self):
 
-        self.title = ""
+        self.title = ""  # TODO: could not have a title, search for title or date or both
         self.creator = ""  # need to get this from get_resource_info()
         self.subject = ""  # need to get this from get_resource_info()
         self.description = ""

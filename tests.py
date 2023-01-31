@@ -16,8 +16,11 @@ class TestASpaceFunctions(unittest.TestCase):
         self.assertIsInstance(self.local_aspace.client, ASnakeClient)
 
     def test_grab_tcuri(self):
-        tc_uris = self.local_aspace.get_tcuri()
+        barcode = 32108050893687  # use these for unittests
+        repository = 4  # use these for unittests
+        error, tc_uris = self.local_aspace.get_tcuri(barcode, repository)
         self.assertTrue(tc_uris)  # return a non-empty list of results
+        self.assertIsInstance(error, bool)  # return True or False if error was caught searching tc uris
 
     def test_test_api(self):
         test_message = self.local_aspace.test_api()

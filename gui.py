@@ -1,5 +1,4 @@
 import aspace
-import aspace as asx
 import gc
 import os
 import PySimpleGUI as psg
@@ -22,11 +21,9 @@ def run_gui():
     For an in-depth review on how this code is structured, see the wiki:
     https://github.com/uga-libraries/ASpace_Batch_Export-Cleanup-Upload/wiki/Code-Structure#run_gui
 
-    Args:
-        # defaults (dict): contains the data from defaults.json file, all data the user has specified as default
+    # :param dict defaults: contains the data from defaults.json file, all data the user has specified as default
 
-    Returns:
-        None
+    :returns None:
     """
     defaults = psg.UserSettings()
     close_program, aspace_instance, repositories = get_aspace_login(defaults)
@@ -36,7 +33,7 @@ def run_gui():
                             default_value=defaults["repo_default"], key="_REPO_SELECT_",),
                psg.Button(" SAVE ", key="_SAVE_REPO_")],
               [psg.FileBrowse(' Select Top Container File ',
-                              file_types=(("Excel Files", "*.xlsx"),),),
+                              file_types=(("CSV Files", "*.csv"),),),
                psg.InputText(key='_TC_FILE_')],
               [psg.FileBrowse(' Select ASpace>DLG Template ', file_types=(("Excel Files", "*.xlsx"),),),
                psg.InputText(default_text=defaults['_AS-DLG_FILE_'], key='_AS-DLG_FILE_')],
@@ -44,7 +41,7 @@ def run_gui():
               [psg.Output(size=(80, 18), key="_output_")],
               [psg.Button(" Open ASpace > DLG Template File ", key="_OPEN_AS-DLG_")]]
 
-    main_window = psg.Window('DLG > ASpace Workflow', layout, resizable=True)
+    main_window = psg.Window('ASpace > DLG Workflow', layout, resizable=True)
     logger.info('Initiate GUI window')
     while True:
         gc.collect()
@@ -62,11 +59,21 @@ def run_gui():
             #  write data - will have to make more calls to aspace to get resource level info.
             ss_inst = spreadsheet.Spreadsheet
             barcodes = ss_inst.get_barcodes(main_values['_TC_FILE_'])
-            # for barcode in barcodes:
-            #     linked_objects = aspace_instance.get_archobjs()
-            #     for linked_object in linked_objects:
-            #         archival_object = aspace.ArchivalObject(linked_object)
-            #         spreadsheet.write_template(archival_object)
+            for barcode in barcodes:
+                uri_error, tc_uri = aspace_instance.get_tcuri(barcode, repositories[main_values["_REPO_SELECT_"]])
+                if uri_error is True:
+                    for message in tc_uri:
+                        print(message)
+                else:
+                    print(type(tc_uri), tc_uri)
+                    linked_objects = aspace_instance.get_archobjs(tc_uri)
+                    # for linked_object in linked_objects:
+                    #     print(linked_object)
+                    #     arch_obj = aspace.ArchivalObject(linked_object)
+                    #     print(arch_obj)
+                    #     arch_obj.parse_archobj()
+                    #     arch_obj.get_resource_info()
+                    #     spreadsheet.write_template(arch_obj)
             # pass
 
 
@@ -78,14 +85,11 @@ def get_aspace_login(defaults):
     uses ASnake.client to authenticate and stay connected to ArchivesSpace. Documentation for ASnake can be found here:
     https://archivesspace-labs.github.io/ArchivesSnake/html/index.html
 
-    Args:
-        defaults (UserSetting class): contains data from defaults.json file, all data the user has specified as default
+    :param defaults: contains data from defaults.json file, all data the user has specified as default
 
-    Returns:
-        close_program (bool): if a user exits the popup, this will return true and end run_gui()
-        aspace_instance (ASpace object): an instance of the ASpace class, containing the ASnake client for accessing and
-        connecting to the API
-        repositories (dict): repositories in the ASpace instance, Name (key): repo_id_# (value)
+    :returns bool close_program: if a user exits the popup, this will return true and end run_gui()
+    :returns aspace_instance: an instance of the ASpace class, containing the ASnake client for accessing and connecting to the API
+    :returns dict repositories: repositories in the ASpace instance, Name (key): repo_id_# (value)
     """
     aspace_instance = None
     repositories = {}
@@ -108,7 +112,7 @@ def get_aspace_login(defaults):
         while window_asplog_active is True:
             event_log, values_log = window_login.Read()
             if event_log == "_SAVE_CLOSE_LOGIN_":
-                aspace_instance = asx.ASpace(username=values_log["_ASPACE_UNAME_"],
+                aspace_instance = aspace.ASpace(username=values_log["_ASPACE_UNAME_"],
                                              password=values_log["_ASPACE_PWORD_"],
                                              api=values_log["_ASPACE_API_"])
                 api_message = aspace_instance.test_api()
@@ -137,8 +141,7 @@ def delete_log_files():  # unittest for this? how?
     """
     Deletes log file(s) found in logs folder if file(s) are older than 1 month.
 
-    Returns:
-        None
+    :returns None:
     """
     if os.path.isdir(Path(os.getcwd(), "logs")) is True:
         logsdir = str(Path(os.getcwd(), "logs"))
@@ -159,25 +162,16 @@ def start_thread(function, args, gui_window):  # TODO: implement threading so Wi
     """
     Starts a thread and disables buttons to prevent multiple requests/threads.
 
-    Args:
-        function (function): the function to pass to the thread
-        args (tuple): the arguments to pass to the function with ending ,. Ex. (arg, arg, arg,)
-        gui_window (PySimpleGUI object): the GUI window used by PySimpleGUI. Used to return an event
+    :param function: the function to pass to the thread
+    :param tuple args: the arguments to pass to the function with ending ,. Ex. (arg, arg, arg,)
+    :param gui_window: the GUI window used by PySimpleGUI. Used to return an event
 
-    Returns:
-        None
+    :returns None:
     """
     logger.info(f'Starting thread: {function}')
     ead_thread = threading.Thread(target=function, args=args)
     ead_thread.start()
-    gui_window[f'{"_EXPORT_EAD_"}'].update(disabled=True)
-    gui_window[f'{"_EXPORT_ALLEADS_"}'].update(disabled=True)
-    gui_window[f'{"_EXPORT_MARCXML_"}'].update(disabled=True)
-    gui_window[f'{"_EXPORT_ALLMARCXMLS_"}'].update(disabled=True)
-    gui_window[f'{"_EXPORT_LABEL_"}'].update(disabled=True)
-    gui_window[f'{"_EXPORT_ALLCONTLABELS_"}'].update(disabled=True)
-    gui_window[f'{"_EXPORT_PDF_"}'].update(disabled=True)
-    gui_window[f'{"_EXPORT_ALLPDFS_"}'].update(disabled=True)
+    gui_window[f'{"_WRITE_AOS_"}'].update(disabled=True)
 
 
 if __name__ == "__main__":

@@ -11,6 +11,14 @@ from asnake.client.web_client import ASnakeAuthError
 class ASpace:
 
     def __init__(self, username, password, api):
+        """
+        ArchivesSpace session using ASnake Client
+
+        :param str username: username for ASpace user, acquired during GUI aspace_login
+        :param str password: password for ASpace user, acquired during GUI aspace_login
+        :param str api: API URL for ASpace instance, acquired during GUI aspace_login
+        """
+
         self.username = username
         """str: ArchivesSpace username provided by user"""
         self.password = password

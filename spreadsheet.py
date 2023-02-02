@@ -11,6 +11,13 @@ class Spreadsheet:
 
     @staticmethod
     def get_barcodes(tc_spreadsheet):
+        """
+        Intakes a spreadsheet and returns a list of barcodes
+
+        :param tc_spreadsheet: spreadsheet object of top containers for retrieving barcodes
+
+        :return list barcodes: list of barcodes (str) for top containers
+        """
         barcodes = []
         with open(tc_spreadsheet, newline='') as csvfile:
             test_reader = csv.reader(csvfile)

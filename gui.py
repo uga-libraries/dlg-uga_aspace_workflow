@@ -65,14 +65,12 @@ def run_gui():
                     for message in tc_uri:
                         print(message)
                 else:
-                    print(type(tc_uri), tc_uri)
                     linked_objects = aspace_instance.get_archobjs(tc_uri)
-                    # for linked_object in linked_objects:
-                    #     print(linked_object)
-                    #     arch_obj = aspace.ArchivalObject(linked_object)
-                    #     print(arch_obj)
-                    #     arch_obj.parse_archobj()
-                    #     arch_obj.get_resource_info()
+                    for linked_object in linked_objects[1:2]:
+                        print(linked_object["id"])
+                        arch_obj = aspace.ArchivalObject(linked_object)  # TODO: use TEST3!!!!
+                        arch_obj.parse_archobj()
+                        arch_obj.get_resource_info(aspace_instance.client)
                     #     spreadsheet.write_template(arch_obj)
             # pass
 

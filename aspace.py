@@ -121,24 +121,25 @@ class ASpace:
         """
         barcode = 32108050893687  # use these for unittests
         repository = 4  # use these for unittests
-        ao_results = None
+        # ao_results = None
         search_aos = self.client.get_paged(f'repositories/{repository}/search', params={'q': f'{barcode}', 'type': ['archival_object']})
-        print(type(search_aos), search_aos)
+        # print(type(search_aos), search_aos)
         # Above for testing purposes only, unless we have to use instead of filter_term query
         ao_results = [result for result in search_aos]
-        print(len(ao_results))
-        print(f'Length: {len(ao_results[0])}\n{ao_results[0]["id"]}\n\n')  # This seems to grab all 27 associated archival objects
+        # print(len(ao_results))
+        # print(f'Length: {len(ao_results[0])}\n{ao_results[0]["id"]}\n\n')  # This seems to grab all 27 associated archival objects
 
 
         # for top_cont in tc_uri:
-        #     print(tc_uri)  # /repositories/4/top_containers/45245
-        #     encoded_uri = urllib.parse.quote(tc_uri, 'UTF-8')  # tried utf8
-        #     print(encoded_uri)  # %2Frepositories%2F4%2Ftop_containers%2F45245
-            # search_aos = self.client.get_paged(f'repositories/4/search',
-            #                                    params={'filter_term[]': f'top_container_uri_u_sstr: {encoded_uri}',
-            #                                            'type': ['archival_object']})
-            # ao_results = [result for result in search_aos]
-            # print(len(ao_results), ao_results[0])  # 322873 - it's grabbing all archival objects, filter_query returns 0
+        #     # print(tc_uri)  # /repositories/4/top_containers/45245
+        #     # encoded_uri = urllib.parse.quote(tc_uri, 'UTF-8')  # tried utf8
+        #     # print(encoded_uri)  # %2Frepositories%2F4%2Ftop_containers%2F45245
+        #     search_aos = self.client.get_paged(f'repositories/4/search',
+        #                                        params={'filter_query[]': f'top_container_uri_u_sstr:{top_cont}',
+        #                                                'type': ['archival_object']})
+        #     print(search_aos)
+        #     ao_results = [result for result in search_aos]
+        #     print(len(ao_results))  # 322873 - it's grabbing all archival objects, filter_query returns 0
         return ao_results
 
 
@@ -146,13 +147,18 @@ class ASpace:
 # aspace_connection.aspace_login()
 # barcode = 32108050893687  # use these for unittests
 # repository = 4  # use these for unittests
-# tc_uri = aspace_connection.get_tcuri(barcode, repository)
+# tc_uri = ['/repositories/4/top_containers/45245']  # aspace_connection.get_tcuri(barcode, repository)
 # aspace_connection.get_archobjs(tc_uri)
 
 
 class ArchivalObject:
 
     def __init__(self, archival_object):
+        """
+        Archival object with specific fields for DLG workflow
+
+        :param json archival_object: json object of the archival object
+        """
         self.arch_obj = archival_object
         """str: Dictionary of archival object metadata"""
         self.title = ""
@@ -177,20 +183,62 @@ class ArchivalObject:
         """str: Preferred citation of the resource"""
         self.subject_personal = ""  # need to get this from get_resource_info()
         """str: Subject person of the resource, multiple separated by | |"""
+        self.resource = ""
+        """str: Resource record URI of the parent resource of the archival object"""
 
     def parse_archobj(self):
+        """
+        Parses an archival object json record to assign instance variables
 
-        self.title = ""  # TODO: could not have a title, search for title or date or both
+        :return None:
+        """
+        print(self.arch_obj)
+        print("\n\n\n")
+        json_info = json.loads(self.arch_obj["json"])
+        for key, value in json_info.items():
+            if key == "title":
+                self.title = json_info["title"]  # TODO: could not have a title, search for title or date or both
+            if key == "dates":
+                if json_info["dates"]:
+                    for date in json_info["dates"]:
+                        for key, value in date.items():
+                            if key == "expression":
+                                self.date = date["expression"]
+            if key == "notes":
+                for note in json_info["notes"]:
+                    if note["type"] == "scopecontent":
+                        complete_note = ""
+                        for note_component in note["content"]:
+                            complete_note += f'{note_component} '
+                        self.description = complete_note.strip()
+                        self.description = note["content"]
+                    if note["type"] == "prefercite":
+                        complete_note = ""
+                        for note_component in note["content"]:
+                            complete_note += f'{note_component} '
+                        self.citation = complete_note.strip()
+                    if note["type"] == "extent":
+                        complete_note = ""
+                        for note_component in note["content"]:
+                            complete_note += f'{note_component} '
+                        self.extent = complete_note.strip()
+            if key == "resource":
+                self.resource = json_info["resource"]["ref"]
+
+    def get_resource_info(self, asp_client):
+        """
+        Intakes an ASpace client and gets the resource info for an archival object and assigns instance variables
+
+        :param asp_client: ArchivesSnake client as created through ASnakeClient
+
+        :return None:
+        """
+        print(self.resource)
+        resource_info = asp_client.get(self.resource).json()
+        print(resource_info)
         self.creator = ""  # need to get this from get_resource_info()
         self.subject = ""  # need to get this from get_resource_info()
-        self.description = ""
-        self.date = ""
         self.subject_spatial = ""  # need to get this from get_resource_info()
         self.subject_medium = ""  # need to get this from get_resource_info()
-        self.extent = ""
-        self.language = ""  # need to get this from get_resource_info()
-        self.citation = ""
+        self.language = resource_info[0]["language_and_script"]["language"]  # need to get this from get_resource_info()
         self.subject_personal = ""  # need to get this from get_resource_info()
-
-    def get_resource_info(self):
-        pass

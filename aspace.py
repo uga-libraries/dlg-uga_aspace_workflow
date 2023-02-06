@@ -233,12 +233,46 @@ class ArchivalObject:
 
         :return None:
         """
-        print(self.resource)
         resource_info = asp_client.get(self.resource).json()
-        print(resource_info)
-        self.creator = ""  # need to get this from get_resource_info()
-        self.subject = ""  # need to get this from get_resource_info()
-        self.subject_spatial = ""  # need to get this from get_resource_info()
-        self.subject_medium = ""  # need to get this from get_resource_info()
-        self.language = resource_info[0]["language_and_script"]["language"]  # need to get this from get_resource_info()
-        self.subject_personal = ""  # need to get this from get_resource_info()
+
+        # Get Language of Materials
+        self.language = resource_info["lang_materials"][0]["language_and_script"]["language"]  # need to get this from get_resource_info()
+
+        for key, value in resource_info.items():
+            # Get Preferred Citation note
+            if "notes" == key:
+                for note in resource_info["notes"]:
+                    if note["type"] == "prefercite":
+                        for subnote in note["subnotes"]:
+                            self.citation = subnote["content"]
+            # Get Creator
+            if "linked_agents" == key:
+                creators = ""
+                for linked_agent in resource_info["linked_agents"]:
+                    if linked_agent["role"] == "creator":
+                        agent_ref = linked_agent["ref"]
+                        agent_json = asp_client.get(agent_ref, params={"resolve[]": True}).json()
+                        creators += agent_json["title"] + "|"  # May need to add spaces before and after | - check with Kat
+                self.creator = creators[:-1]
+            # Get Subjects
+            if "subjects" == key:
+                subjects = ""
+                spatials = ""
+                mediums = ""
+                personals = ""
+
+                for subject in resource_info["subjects"]:
+                    subject_ref = subject["ref"]
+                    subject_json = asp_client.get(subject_ref, params={"resolve[]": True}).json()
+                    for key, value in subject_json.items():
+                        if key == "terms":
+                            for term in subject_json["terms"]:
+                                if "term_type" in term:
+                                    if term["term_type"] == "genre_form":
+                                        spatials += term["term"] + "|"
+
+
+                self.subject = ""  # no type, need to get this from get_resource_info()
+                self.subject_spatial = spatials[:-1]  # need to get this from get_resource_info()
+                self.subject_medium = ""  # need to get this from get_resource_info()
+                self.subject_personal = ""  # need to get this from get_resource_info()

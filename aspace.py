@@ -192,8 +192,8 @@ class ArchivalObject:
 
         :return None:
         """
-        print(self.arch_obj)
-        print("\n\n\n")
+        # print(self.arch_obj)
+        # print("\n\n\n")
         json_info = json.loads(self.arch_obj["json"])
         for key, value in json_info.items():
             if key == "title":
@@ -225,7 +225,7 @@ class ArchivalObject:
             if key == "resource":
                 self.resource = json_info["resource"]["ref"]
 
-    def get_resource_info(self, asp_client):
+    def get_resource_info(self, asp_client):  # TODO - need to only call this info once per spreadsheet - minimize API calls
         """
         Intakes an ASpace client and gets the resource info for an archival object and assigns instance variables
 
@@ -248,31 +248,38 @@ class ArchivalObject:
             # Get Creator
             if "linked_agents" == key:
                 creators = ""
+                personals = ""
                 for linked_agent in resource_info["linked_agents"]:
                     if linked_agent["role"] == "creator":
                         agent_ref = linked_agent["ref"]
                         agent_json = asp_client.get(agent_ref, params={"resolve[]": True}).json()
                         creators += agent_json["title"] + "|"  # May need to add spaces before and after | - check with Kat
+                    if linked_agent["role"] == "subject":
+                        person_ref = linked_agent["ref"]
+                        person_json = asp_client.get(person_ref, params={"resolve[]": True}).json()
+                        if "agent_type" in person_json:
+                            if person_json["agent_type"] == "agent_person":
+                                personals += person_json["title"] + "|"
                 self.creator = creators[:-1]
+                self.subject_personal = personals[:-1]  # need to get this from get_resource_info()
             # Get Subjects
             if "subjects" == key:
                 subjects = ""
                 spatials = ""
                 mediums = ""
-                personals = ""
-
                 for subject in resource_info["subjects"]:
                     subject_ref = subject["ref"]
                     subject_json = asp_client.get(subject_ref, params={"resolve[]": True}).json()
                     for key, value in subject_json.items():
                         if key == "terms":
-                            for term in subject_json["terms"]:
-                                if "term_type" in term:
-                                    if term["term_type"] == "genre_form":
-                                        spatials += term["term"] + "|"
-
-
-                self.subject = ""  # no type, need to get this from get_resource_info()
+                            # for term in subject_json["terms"]:
+                            if "term_type" in subject_json["terms"][0]:  # TODO - check with Kat - check the first term in subject for type only - otherwise have to check each subterm in subject for type - not sure if mixed subject types exist Ex. camp counselors (topical) -- Georgia (geographic) -- Clayton (geographic) -- Correspondence (topical)
+                                if subject_json["terms"][0]["term_type"] == "genre_form":
+                                    mediums += subject_json["title"] + "|"  # May need to add spaces before and after | - check with Kat
+                                if subject_json["terms"][0]["term_type"] == "topical":
+                                    subjects += subject_json["title"] + "|"  # May need to add spaces before and after | - check with Kat
+                                if subject_json["terms"][0]["term_type"] == "geographic":
+                                    spatials += subject_json["title"] + "|"  # May need to add spaces before and after | - check with Kat
+                self.subject = subjects[:-1]  # no type, need to get this from get_resource_info()
                 self.subject_spatial = spatials[:-1]  # need to get this from get_resource_info()
-                self.subject_medium = ""  # need to get this from get_resource_info()
-                self.subject_personal = ""  # need to get this from get_resource_info()
+                self.subject_medium = mediums[:-1]  # need to get this from get_resource_info()

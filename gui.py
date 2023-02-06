@@ -71,6 +71,7 @@ def run_gui():
                         arch_obj = aspace.ArchivalObject(linked_object)  # TODO: use TEST3!!!!
                         arch_obj.parse_archobj()
                         arch_obj.get_resource_info(aspace_instance.client)
+                        # print(arch_obj.__dict__)
                     #     spreadsheet.write_template(arch_obj)
             # pass
 

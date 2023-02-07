@@ -3,6 +3,7 @@ import gc
 import os
 import PySimpleGUI as psg
 import spreadsheet
+import sys
 import threading
 import time
 
@@ -27,6 +28,10 @@ def run_gui():
     """
     defaults = psg.UserSettings()
     close_program, aspace_instance, repositories = get_aspace_login(defaults)
+
+    if close_program is True:
+        logger.info("User initiated closing program")
+        sys.exit()
 
     layout = [[psg.Text("Choose your repository:", font=("Roboto", 12))],
               [psg.DropDown(list(repositories.keys()), readonly=True,
@@ -57,22 +62,31 @@ def run_gui():
             #  2: take list of barcodes and feed them into aspace to get tc_uris or list of archival objects
             #  3: for loop through list of archival objects - instance of ArchivalObject pass to spreadsheet.py and
             #  write data - will have to make more calls to aspace to get resource level info.
+            defaults["_AS-DLG_FILE_"] = main_values["_AS-DLG_FILE_"]
             ss_inst = spreadsheet.Spreadsheet
             barcodes = ss_inst.get_barcodes(main_values['_TC_FILE_'])
             for barcode in barcodes:
-                uri_error, tc_uri = aspace_instance.get_tcuri(barcode, repositories[main_values["_REPO_SELECT_"]])
-                if uri_error is True:
-                    for message in tc_uri:
-                        print(message)
+                # uri_error, tc_uri = aspace_instance.get_tcuri(barcode, repositories[main_values["_REPO_SELECT_"]])
+                #
+                # if uri_error is True:
+                #     for message in tc_uri:
+                #         print(message)
+                # else:
+                linked_objects, archobjs_error = aspace_instance.get_archobjs(barcode,
+                                                                              repositories[main_values["_REPO_SELECT_"]])
+                if archobjs_error:
+                    print(archobjs_error)
                 else:
-                    linked_objects = aspace_instance.get_archobjs(tc_uri)
-                    for linked_object in linked_objects[1:2]:
+                    row_num = 2
+                    for linked_object in linked_objects:
                         print(linked_object["id"])
-                        arch_obj = aspace.ArchivalObject(linked_object)  # TODO: use TEST3!!!!
+                        arch_obj = aspace.ArchivalObject(linked_object)
                         arch_obj.parse_archobj()
                         arch_obj.get_resource_info(aspace_instance.client)
                         # print(arch_obj.__dict__)
-                    #     spreadsheet.write_template(arch_obj)
+                        ss_inst.write_template(main_values["_AS-DLG_FILE_"], arch_obj, row_num)
+                        row_num += 1
+                        print("\n\n\n")
             # pass
 
 

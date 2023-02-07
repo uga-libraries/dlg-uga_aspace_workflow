@@ -1,5 +1,6 @@
 import json
 import requests
+from dateutil.parser import *
 import urllib.parse
 import asnake.logging as logging
 
@@ -111,21 +112,26 @@ class ASpace:
     # 4th step - get archival objects associated with top containers - use collection ref (URI) to narrow searching for archival objects within collection
     # use https://archivesspace.github.io/archivesspace/api/?shell#fetch-tree-information-for-the-top-level-resource-record - go through each archival object?
 
-    def get_archobjs(self, tc_uri):
+    def get_archobjs(self, barcode, repository):
         """
         Gets the archival objects associated with a top container
 
         :param list tc_uri: list of the top container URI
 
         :return list ao_results: list of all archival objects associated with the top container
+        :return str archobjs_error: error message of search if occurred, empty string otherwise
         """
-        barcode = 32108050893687  # use these for unittests
-        repository = 4  # use these for unittests
+        # barcode = 32108050893687  # use these for unittests
+        # repository = 4  # use these for unittests
         # ao_results = None
+        archobjs_error = ""
         search_aos = self.client.get_paged(f'repositories/{repository}/search', params={'q': f'{barcode}', 'type': ['archival_object']})
         # print(type(search_aos), search_aos)
         # Above for testing purposes only, unless we have to use instead of filter_term query
         ao_results = [result for result in search_aos]
+        if "error" in search_aos:
+            print(f'Error when searching for barcode: {search_aos}')
+            archobjs_error = "Error when searching for barcode: {search_aos}"
         # print(len(ao_results))
         # print(f'Length: {len(ao_results[0])}\n{ao_results[0]["id"]}\n\n')  # This seems to grab all 27 associated archival objects
 
@@ -140,7 +146,7 @@ class ASpace:
         #     print(search_aos)
         #     ao_results = [result for result in search_aos]
         #     print(len(ao_results))  # 322873 - it's grabbing all archival objects, filter_query returns 0
-        return ao_results
+        return ao_results, archobjs_error
 
 
 # aspace_connection = ASpace(as_un, as_pw, as_api)
@@ -197,13 +203,30 @@ class ArchivalObject:
         json_info = json.loads(self.arch_obj["json"])
         for key, value in json_info.items():
             if key == "title":
-                self.title = json_info["title"]  # TODO: could not have a title, search for title or date or both
+                self.title = json_info["title"]
+
             if key == "dates":
+                begin = ""
+                end = ""
+                express_date = ""
                 if json_info["dates"]:
                     for date in json_info["dates"]:
-                        for key, value in date.items():
+                        for key, value in date.items():  # TODO - need to change format: YYYY-MM-DD, YYYY-MM, YYYY or YYYY/YYYY
+                            if key == "begin":
+                                begin = parse(date["begin"])
+                            if key == "end":
+                                end = parse(date["end"])
                             if key == "expression":
-                                self.date = date["expression"]
+                                express_date = parse(date["expression"])  # TODO - stuck on how to normalize dates
+                if begin and not end:
+                    self.date = f'{begin}'
+                elif not begin and end:
+                    self.date = f'{end}'
+                elif begin and end:
+                    self.date = f'{begin}/{end}'
+                elif express_date:
+                    self.date = f'{express_date}'
+
             if key == "notes":
                 for note in json_info["notes"]:
                     if note["type"] == "scopecontent":
@@ -225,7 +248,7 @@ class ArchivalObject:
             if key == "resource":
                 self.resource = json_info["resource"]["ref"]
 
-    def get_resource_info(self, asp_client):  # TODO - need to only call this info once per spreadsheet - minimize API calls
+    def get_resource_info(self, asp_client):  # TODO - need to only call this info once per spreadsheet or barcode - minimize API calls
         """
         Intakes an ASpace client and gets the resource info for an archival object and assigns instance variables
 

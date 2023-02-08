@@ -2,6 +2,7 @@ import aspace
 import gc
 import os
 import PySimpleGUI as psg
+import re
 import spreadsheet
 import sys
 import threading
@@ -13,6 +14,8 @@ from pathlib import Path
 logger.remove()
 logger.add(str(Path('logs', 'log_{time:YYYY-MM-DD}.log')),
            format="{time}-{level}: {message}")
+
+id_field_regex = re.compile(r"(^id_+\d)")
 
 
 def run_gui():
@@ -78,15 +81,49 @@ def run_gui():
                     print(archobjs_error)
                 else:
                     row_num = 2
+                    resource_links = {}
+                    resource_ids = []  # TODO add to arch_obj instance - guan_id - NOTE - exclude ms, ua from beginning - ms1385a >> guan_1385a
+                    selections = []
                     for linked_object in linked_objects:
-                        print(linked_object["id"])
-                        arch_obj = aspace.ArchivalObject(linked_object)
-                        arch_obj.parse_archobj()
-                        arch_obj.get_resource_info(aspace_instance.client)
-                        # print(arch_obj.__dict__)
-                        ss_inst.write_template(main_values["_AS-DLG_FILE_"], arch_obj, row_num)
-                        row_num += 1
-                        print("\n\n\n")
+                        combined_aspace_id = ""
+                        print(linked_object)
+                        parent_resource = aspace_instance.client.get(linked_object["resource"],
+                                                                     params={"resolve[]": True}).json()
+                        for key, value in parent_resource.items():
+                            id_match = id_field_regex.match(key)
+                            if id_match:
+                                combined_aspace_id += value + "-"
+                        combined_aspace_id = combined_aspace_id[:-1]
+                        if combined_aspace_id not in resource_ids:
+                            resource_ids.append(combined_aspace_id)
+                        resource_links[combined_aspace_id] = linked_object
+                    if len(resource_ids) > 1:
+                        multres_layout = [[psg.Text("Choose which resource you want archival objects linked:")],
+                                          [psg.Listbox(values=resource_ids, key="_RES-IDS_",
+                                                       size=(30, 6))],
+                                          [psg.Button(" SELECT ", key="_MULTRES-SELECT_")]]
+
+                        multres_window = psg.Window('Select Resources', multres_layout, resizable=True)
+                        logger.info('Select Resources window')
+                        while True:
+                            multres_event, multres_values = multres_window.Read()
+                            if multres_event == 'Cancel' or multres_event is None or multres_event == "Exit":
+                                logger.info("User initiated closing Select Resources window")
+                                multres_window.close()
+                                break
+                            if multres_event == "_MULTRES-SELECT_":
+                                selections = multres_values["_RES-IDS_"]
+                                multres_window.close()
+                                break
+                    for resource in selections:  # TODO - won't work if only 1
+                        if resource in resource_links:
+                            arch_obj = aspace.ArchivalObject(resource_links[resource])
+                            arch_obj.parse_archobj()
+                            arch_obj.get_resource_info(aspace_instance.client)
+                            # print(arch_obj.__dict__)
+                            ss_inst.write_template(main_values["_AS-DLG_FILE_"], arch_obj, row_num)
+                            row_num += 1
+                            print("\n\n\n")
             # pass
 
 

@@ -167,6 +167,7 @@ class ArchivalObject:
         """
         self.arch_obj = archival_object
         """str: Dictionary of archival object metadata"""
+        self.arch_obj_uri = ""  # TODO - add arch_obj URI to spreadsheet
         self.title = ""
         """str: Title of the archival object"""
         self.creator = ""  # need to get this from get_resource_info()
@@ -213,11 +214,11 @@ class ArchivalObject:
                     for date in json_info["dates"]:
                         for key, value in date.items():  # TODO - need to change format: YYYY-MM-DD, YYYY-MM, YYYY or YYYY/YYYY
                             if key == "begin":
-                                begin = parse(date["begin"])
+                                begin = date["begin"]
                             if key == "end":
-                                end = parse(date["end"])
+                                end = date["end"]
                             if key == "expression":
-                                express_date = parse(date["expression"])  # TODO - stuck on how to normalize dates
+                                express_date = date["expression"]  # TODO - stuck on how to normalize dates
                 if begin and not end:
                     self.date = f'{begin}'
                 elif not begin and end:
@@ -295,14 +296,14 @@ class ArchivalObject:
                     subject_json = asp_client.get(subject_ref, params={"resolve[]": True}).json()
                     for key, value in subject_json.items():
                         if key == "terms":
-                            # for term in subject_json["terms"]:
+                            # for term in subject_json["terms"]:  # TODO - remove ending period for terms if exists
                             if "term_type" in subject_json["terms"][0]:  # TODO - check with Kat - check the first term in subject for type only - otherwise have to check each subterm in subject for type - not sure if mixed subject types exist Ex. camp counselors (topical) -- Georgia (geographic) -- Clayton (geographic) -- Correspondence (topical)
                                 if subject_json["terms"][0]["term_type"] == "genre_form":
-                                    mediums += subject_json["title"] + "|"  # May need to add spaces before and after | - check with Kat
+                                    mediums += subject_json["title"] + "||"  # May need to add spaces before and after | - check with Kat
                                 if subject_json["terms"][0]["term_type"] == "topical":
-                                    subjects += subject_json["title"] + "|"  # May need to add spaces before and after | - check with Kat
+                                    subjects += subject_json["title"] + "||"  # May need to add spaces before and after | - check with Kat
                                 if subject_json["terms"][0]["term_type"] == "geographic":
-                                    spatials += subject_json["title"] + "|"  # May need to add spaces before and after | - check with Kat
+                                    spatials += subject_json["title"] + "||"  # May need to add spaces before and after | - check with Kat
                 self.subject = subjects[:-1]  # no type, need to get this from get_resource_info()
                 self.subject_spatial = spatials[:-1]  # need to get this from get_resource_info()
                 self.subject_medium = mediums[:-1]  # need to get this from get_resource_info()

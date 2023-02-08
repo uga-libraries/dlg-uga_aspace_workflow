@@ -92,6 +92,14 @@ class Spreadsheet:
                     cell_letter = utils.get_column_letter(coordinate[1])
                     cell_coordinate = f'{cell_letter}{row_number}'
                     sheet[cell_coordinate] = arch_obj.subject_personal
+                if "holding institution" == column:
+                    cell_letter = utils.get_column_letter(coordinate[1])
+                    cell_coordinate = f'{cell_letter}{row_number}'
+                    sheet[cell_coordinate] = "Hargrett Library"
+                if "public" == column:
+                    cell_letter = utils.get_column_letter(coordinate[1])
+                    cell_coordinate = f'{cell_letter}{row_number}'
+                    sheet[cell_coordinate] = "true"
         temp_wb.save(aspace_dlg_template)
 
 

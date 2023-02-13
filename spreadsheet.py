@@ -41,13 +41,17 @@ class Spreadsheet:
         data_columns = {}
         temp_wb = load_workbook(aspace_dlg_template)
         for sheet in temp_wb:
-            for row in sheet.iter_rows(max_row=1, max_col=27):
+            for row in sheet.iter_rows(max_row=1, max_col=28):
                 for header in row:  # TODO - check if there are headers - don't want to write to blank sheet
                     # column_index = header.column
                     data_columns[header.value] = utils.coordinate_to_tuple(header.coordinate)
                     # column_index += 1
                     # row_index = header.row
             for column, coordinate in data_columns.items():
+                if "DLG Collections ID" == column:
+                    cell_letter = utils.get_column_letter(coordinate[1])
+                    cell_coordinate = f'{cell_letter}{row_number}'
+                    sheet[cell_coordinate] = arch_obj.dlg_id
                 if "dcterms_title" == column:
                     cell_letter = utils.get_column_letter(coordinate[1])
                     cell_coordinate = f'{cell_letter}{row_number}'

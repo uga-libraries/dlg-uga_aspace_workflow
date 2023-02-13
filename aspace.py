@@ -159,14 +159,17 @@ class ASpace:
 
 class ArchivalObject:
 
-    def __init__(self, archival_object):
+    def __init__(self, archival_object, dlg_id):
         """
         Archival object with specific fields for DLG workflow
 
         :param json archival_object: json object of the archival object
+        :param str dlg_id: ID for DLG Collection ID column
         """
         self.arch_obj = archival_object
         """str: Dictionary of archival object metadata"""
+        self.dlg_id = dlg_id
+        """str: ID for DLG Collection ID column"""
         self.arch_obj_uri = ""  # TODO - add arch_obj URI to spreadsheet
         self.title = ""
         """str: Title of the archival object"""
@@ -232,10 +235,15 @@ class ArchivalObject:
                 for note in json_info["notes"]:
                     if note["type"] == "scopecontent":
                         complete_note = ""
-                        for note_component in note["content"]:
-                            complete_note += f'{note_component} '
+                        if "content" in note:
+                            for note_component in note["content"]:
+                                complete_note += f'{note_component} '
+                        elif "subnotes" in note:
+                            for subnote in note['subnotes']:
+                                if "content" in subnote:
+                                    complete_note += subnote["content"]
                         self.description = complete_note.strip()
-                        self.description = note["content"]
+                        # self.description = note["content"]
                     if note["type"] == "prefercite":
                         complete_note = ""
                         for note_component in note["content"]:
@@ -266,9 +274,10 @@ class ArchivalObject:
             # Get Preferred Citation note
             if "notes" == key:
                 for note in resource_info["notes"]:
-                    if note["type"] == "prefercite":
-                        for subnote in note["subnotes"]:
-                            self.citation = subnote["content"]
+                    if "type" in note:
+                        if note["type"] == "prefercite":
+                            for subnote in note["subnotes"]:
+                                self.citation = subnote["content"]
             # Get Creator
             if "linked_agents" == key:
                 creators = ""
@@ -277,15 +286,18 @@ class ArchivalObject:
                     if linked_agent["role"] == "creator":
                         agent_ref = linked_agent["ref"]
                         agent_json = asp_client.get(agent_ref, params={"resolve[]": True}).json()
-                        creators += agent_json["title"] + "|"  # May need to add spaces before and after | - check with Kat
+                        creators += agent_json["title"] + "||"
                     if linked_agent["role"] == "subject":
                         person_ref = linked_agent["ref"]
                         person_json = asp_client.get(person_ref, params={"resolve[]": True}).json()
                         if "agent_type" in person_json:
                             if person_json["agent_type"] == "agent_person":
-                                personals += person_json["title"] + "|"
-                self.creator = creators[:-1]
-                self.subject_personal = personals[:-1]  # need to get this from get_resource_info()
+                                if "." in person_json["title"]:
+                                    personals += person_json["title"].rstrip(".") + "||"
+                                else:
+                                    personals += person_json["title"] + "||"
+                self.creator = creators[:-2]
+                self.subject_personal = personals[:-2]
             # Get Subjects
             if "subjects" == key:
                 subjects = ""
@@ -299,11 +311,21 @@ class ArchivalObject:
                             # for term in subject_json["terms"]:  # TODO - remove ending period for terms if exists
                             if "term_type" in subject_json["terms"][0]:  # TODO - check with Kat - check the first term in subject for type only - otherwise have to check each subterm in subject for type - not sure if mixed subject types exist Ex. camp counselors (topical) -- Georgia (geographic) -- Clayton (geographic) -- Correspondence (topical)
                                 if subject_json["terms"][0]["term_type"] == "genre_form":
-                                    mediums += subject_json["title"] + "||"  # May need to add spaces before and after | - check with Kat
+                                    if "." in subject_json["title"]:
+                                        mediums += subject_json["title"].rstrip(".") + "||"
+                                    else:
+                                        mediums += subject_json["title"] + "||"
                                 if subject_json["terms"][0]["term_type"] == "topical":
-                                    subjects += subject_json["title"] + "||"  # May need to add spaces before and after | - check with Kat
+                                    if "." in subject_json["title"]:
+                                        subjects += subject_json["title"].rstrip(".") + "||"
+                                    else:
+                                        subjects += subject_json["title"] + "||"
                                 if subject_json["terms"][0]["term_type"] == "geographic":
-                                    spatials += subject_json["title"] + "||"  # May need to add spaces before and after | - check with Kat
-                self.subject = subjects[:-1]  # no type, need to get this from get_resource_info()
-                self.subject_spatial = spatials[:-1]  # need to get this from get_resource_info()
-                self.subject_medium = mediums[:-1]  # need to get this from get_resource_info()
+                                    if "." in subject_json["title"]:
+                                        spatials += subject_json["title"].rstrip(".") + "||"
+                                    else:
+                                        spatials += subject_json["title"] + "||"
+                self.subject = subjects[:-2]  # no type, need to get this from get_resource_info()
+                self.subject_spatial = spatials[:-2]  # need to get this from get_resource_info()
+                self.subject_medium = mediums[:-2]  # need to get this from get_resource_info()
+

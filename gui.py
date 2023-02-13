@@ -16,6 +16,7 @@ logger.add(str(Path('logs', 'log_{time:YYYY-MM-DD}.log')),
            format="{time}-{level}: {message}")
 
 id_field_regex = re.compile(r"(^id_+\d)")
+collid_regex = re.compile(r"(?<=ms|ua).*")
 
 
 def run_gui():
@@ -115,9 +116,29 @@ def run_gui():
                                 selections = multres_values["_RES-IDS_"]
                                 multres_window.close()
                                 break
-                    for resource in selections:  # TODO - won't work if only 1
-                        if resource in resource_links:
-                            arch_obj = aspace.ArchivalObject(resource_links[resource])
+                    if selections:
+                        for resource in selections:  # TODO - won't work if only 1
+                            if resource in resource_links:
+                                if collid_regex.match(resource):
+                                    collnum = collid_regex.match(resource)
+                                else:
+                                    collnum = resource
+                                dlg_id = f'guan_{collnum}'
+                                arch_obj = aspace.ArchivalObject(resource_links[resource], dlg_id)
+                                arch_obj.parse_archobj()
+                                arch_obj.get_resource_info(aspace_instance.client)
+                                # print(arch_obj.__dict__)
+                                ss_inst.write_template(main_values["_AS-DLG_FILE_"], arch_obj, row_num)
+                                row_num += 1
+                                print("\n\n\n")
+                    else:
+                        for res_id, linked_object in resource_links.items():
+                            if collid_regex.match(res_id):
+                                collnum = collid_regex.match(res_id)
+                            else:
+                                collnum = res_id
+                            dlg_id = f'guan_{collnum}'
+                            arch_obj = aspace.ArchivalObject(resource_links[res_id], dlg_id)
                             arch_obj.parse_archobj()
                             arch_obj.get_resource_info(aspace_instance.client)
                             # print(arch_obj.__dict__)

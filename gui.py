@@ -184,8 +184,8 @@ def get_aspace_login(defaults):
             event_log, values_log = window_login.Read()
             if event_log == "_SAVE_CLOSE_LOGIN_":
                 aspace_instance = aspace.ASpace(username=values_log["_ASPACE_UNAME_"],
-                                             password=values_log["_ASPACE_PWORD_"],
-                                             api=values_log["_ASPACE_API_"])
+                                                password=values_log["_ASPACE_PWORD_"],
+                                                api=values_log["_ASPACE_API_"])
                 api_message = aspace_instance.test_api()
                 if api_message:
                     psg.Popup(api_message)

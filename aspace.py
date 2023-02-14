@@ -56,7 +56,7 @@ class ASpace:
         # logging.setup_logging(level='DEBUG')
         error_message = None
         try:
-            self.client = ASnakeClient(baseurl=as_api, username=as_un, password=as_pw)
+            self.client = ASnakeClient(baseurl=self.api, username=self.username, password=self.password)
             self.client.authorize()
         except ASnakeAuthError as connection_error:
             error_message = 'Your username and/or password were entered\n incorrectly. Please try again.\n\n'

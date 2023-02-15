@@ -16,7 +16,7 @@ logger.add(str(Path('logs', 'log_{time:YYYY-MM-DD}.log')),
            format="{time}-{level}: {message}")
 
 id_field_regex = re.compile(r"(^id_+\d)")
-collid_regex = re.compile(r"(?<=ms|ua|MS).*")
+collid_regex = re.compile(r"(?<=ms|ua).*|(?<=MS ).*")
 
 
 def run_gui():

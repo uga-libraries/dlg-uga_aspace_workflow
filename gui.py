@@ -16,7 +16,7 @@ logger.add(str(Path('logs', 'log_{time:YYYY-MM-DD}.log')),
            format="{time}-{level}: {message}")
 
 id_field_regex = re.compile(r"(^id_+\d)")
-collid_regex = re.compile(r"(?<=ms|ua).*")
+collid_regex = re.compile(r"(?<=ms|ua|MS).*")
 
 
 def run_gui():
@@ -69,6 +69,7 @@ def run_gui():
             defaults["_AS-DLG_FILE_"] = main_values["_AS-DLG_FILE_"]
             ss_inst = spreadsheet.Spreadsheet
             barcodes = ss_inst.get_barcodes(main_values['_TC_FILE_'])
+            row_num = 2
             for barcode in barcodes:
                 # uri_error, tc_uri = aspace_instance.get_tcuri(barcode, repositories[main_values["_REPO_SELECT_"]])
                 #
@@ -81,13 +82,12 @@ def run_gui():
                 if archobjs_error:
                     print(archobjs_error)
                 else:
-                    row_num = 2
                     resource_links = {}
-                    resource_ids = []  # TODO add to arch_obj instance - guan_id - NOTE - exclude ms, ua from beginning - ms1385a >> guan_1385a
+                    resource_ids = []
                     selections = []
                     for linked_object in linked_objects:
                         combined_aspace_id = ""
-                        print(linked_object)
+                        # print(linked_object)
                         parent_resource = aspace_instance.client.get(linked_object["resource"],
                                                                      params={"resolve[]": True}).json()
                         for key, value in parent_resource.items():
@@ -97,7 +97,9 @@ def run_gui():
                         combined_aspace_id = combined_aspace_id[:-1]
                         if combined_aspace_id not in resource_ids:
                             resource_ids.append(combined_aspace_id)
-                        resource_links[combined_aspace_id] = linked_object
+                            resource_links[combined_aspace_id] = [linked_object]
+                        else:
+                            resource_links[combined_aspace_id].append(linked_object)
                     if len(resource_ids) > 1:
                         multres_layout = [[psg.Text("Choose which resource you want archival objects linked:")],
                                           [psg.Listbox(values=resource_ids, key="_RES-IDS_",
@@ -117,34 +119,36 @@ def run_gui():
                                 multres_window.close()
                                 break
                     if selections:
-                        for resource in selections:  # TODO - won't work if only 1
+                        for resource in selections:
                             if resource in resource_links:
-                                if collid_regex.match(resource):
-                                    collnum = collid_regex.match(resource)
+                                if collid_regex.findall(resource):
+                                    collnum = collid_regex.findall(resource)[0]
                                 else:
                                     collnum = resource
                                 dlg_id = f'guan_{collnum}'
-                                arch_obj = aspace.ArchivalObject(resource_links[resource], dlg_id)
+                                for linked_object in resource_links[resource]:
+                                    arch_obj = aspace.ArchivalObject(linked_object, dlg_id)
+                                    arch_obj.parse_archobj()
+                                    arch_obj.get_resource_info(aspace_instance.client)
+                                    # print(arch_obj.__dict__)
+                                    ss_inst.write_template(main_values["_AS-DLG_FILE_"], arch_obj, row_num)
+                                    row_num += 1
+                                    print("\n\n\n")
+                    else:
+                        for res_id, linked_object in resource_links.items():
+                            if collid_regex.findall(res_id):
+                                collnum = collid_regex.findall(res_id)[0]
+                            else:
+                                collnum = res_id
+                            dlg_id = f'guan_{collnum}'
+                            for linked_object in linked_objects:
+                                arch_obj = aspace.ArchivalObject(linked_object, dlg_id)
                                 arch_obj.parse_archobj()
                                 arch_obj.get_resource_info(aspace_instance.client)
                                 # print(arch_obj.__dict__)
                                 ss_inst.write_template(main_values["_AS-DLG_FILE_"], arch_obj, row_num)
                                 row_num += 1
                                 print("\n\n\n")
-                    else:
-                        for res_id, linked_object in resource_links.items():
-                            if collid_regex.match(res_id):
-                                collnum = collid_regex.match(res_id)
-                            else:
-                                collnum = res_id
-                            dlg_id = f'guan_{collnum}'
-                            arch_obj = aspace.ArchivalObject(resource_links[res_id], dlg_id)
-                            arch_obj.parse_archobj()
-                            arch_obj.get_resource_info(aspace_instance.client)
-                            # print(arch_obj.__dict__)
-                            ss_inst.write_template(main_values["_AS-DLG_FILE_"], arch_obj, row_num)
-                            row_num += 1
-                            print("\n\n\n")
             # pass
 
 
@@ -197,11 +201,8 @@ def get_aspace_login(defaults):
                         repositories = aspace_instance.get_repos()
                         defaults["as_api"] = values_log["_ASPACE_API_"]
                         window_asplog_active = False
-                        correct_creds = True
             if event_log is None or event_log == 'Cancel':
                 window_login.close()
-                window_asplog_active = False
-                correct_creds = True
                 close_program = True
                 break
         window_login.close()

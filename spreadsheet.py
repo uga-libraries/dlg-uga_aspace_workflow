@@ -38,8 +38,9 @@ class Spreadsheet:
 
     @staticmethod
     def write_template(aspace_dlg_template, arch_obj, row_number):
+        print(row_number)
         data_columns = {}
-        temp_wb = load_workbook(aspace_dlg_template)
+        temp_wb = load_workbook(aspace_dlg_template)  # TODO - add check to see if spreadsheet is open, if so, ask user to close spreadsheet
         for sheet in temp_wb:
             for row in sheet.iter_rows(max_row=1, max_col=28):
                 for header in row:  # TODO - check if there are headers - don't want to write to blank sheet
@@ -48,7 +49,7 @@ class Spreadsheet:
                     # column_index += 1
                     # row_index = header.row
             for column, coordinate in data_columns.items():
-                if "DLG Collections ID" == column:
+                if "DLG Collection ID" == column:
                     cell_letter = utils.get_column_letter(coordinate[1])
                     cell_coordinate = f'{cell_letter}{row_number}'
                     sheet[cell_coordinate] = arch_obj.dlg_id

@@ -1,5 +1,6 @@
 import json
 import requests
+import re
 from dateutil.parser import *
 import urllib.parse
 import asnake.logging as logging
@@ -7,6 +8,9 @@ import asnake.logging as logging
 from secrets import *
 from asnake.client import ASnakeClient
 from asnake.client.web_client import ASnakeAuthError
+
+indicator_field_regex = re.compile(r"(^indicator_+\d)")
+type_field_regex = re.compile(r"(^type_+\d)")
 
 
 class ASpace:
@@ -254,6 +258,31 @@ class ArchivalObject:
                         for note_component in note["content"]:
                             complete_note += f'{note_component} '
                         self.extent = complete_note.strip()
+            if key == "instances":
+                box = ""
+                folder = ""
+                item = ""
+                for instance in json_info["instances"]:
+                    if "sub_container" in instance:
+                        for key, value in instance["sub_container"].items():
+                            type_match = type_field_regex.match(key)
+                            indicator_match = indicator_field_regex.match(key)
+                            if type_match:
+                                if value == "folder":
+                                    folder += value
+                                    if indicator_match:
+                                        item += f' {instance["sub_container"][indicator_match]}'
+                                if value == "item":
+                                    item += value
+                                    if indicator_match:
+                                        item += f' {instance["sub_container"][indicator_match]}'
+                    if "top_container" in instance:
+                        for key, value in instance["top_container"]["_resolved"].items():
+                            if key == "type":
+                                box += f'{instance["top_container"]["_resolved"]["type"]}'
+                            if key == "indicator":
+                                box += f'{instance["top_container"]["_resolved"]["indicator"]}'
+                print(f'{box, folder, item}')
             if key == "resource":
                 self.resource = json_info["resource"]["ref"]
 

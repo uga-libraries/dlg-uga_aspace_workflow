@@ -264,24 +264,28 @@ class ArchivalObject:
                 item = ""
                 for instance in json_info["instances"]:
                     if "sub_container" in instance:
+                        sc_indicator = ""
+                        sc_type = ""
                         for key, value in instance["sub_container"].items():
                             type_match = type_field_regex.match(key)
                             indicator_match = indicator_field_regex.match(key)
-                            if type_match:
+                            if indicator_match:
+                                sc_indicator = instance["sub_container"][indicator_match.string]
+                            elif type_match:  # TODO: figure out a way to match indicator according to type before or after matching
                                 if value == "folder":
-                                    folder += value
-                                    if indicator_match:
-                                        item += f' {instance["sub_container"][indicator_match]}'
+                                    folder += value + f' {sc_indicator}'
                                 if value == "item":
                                     item += value
-                                    if indicator_match:
-                                        item += f' {instance["sub_container"][indicator_match]}'
-                    if "top_container" in instance:
-                        for key, value in instance["top_container"]["_resolved"].items():
-                            if key == "type":
-                                box += f'{instance["top_container"]["_resolved"]["type"]}'
-                            if key == "indicator":
-                                box += f'{instance["top_container"]["_resolved"]["indicator"]}'
+                                    item += value + f' {sc_indicator}'
+                        if key == "top_container":
+                            box_indicator = ""
+                            tc_type = ""
+                            for key, value in instance["sub_container"]["top_container"]["_resolved"].items():
+                                if key == "type":
+                                    tc_type = instance["sub_container"]["top_container"]["_resolved"]["type"]
+                                elif key == "indicator":
+                                    box_indicator = instance["sub_container"]["top_container"]["_resolved"]["indicator"]
+                            box = f'{tc_type} {box_indicator}'
                 print(f'{box, folder, item}')
             if key == "resource":
                 self.resource = json_info["resource"]["ref"]

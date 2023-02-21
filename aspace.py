@@ -199,6 +199,12 @@ class ArchivalObject:
         """str: Subject person of the resource, multiple separated by | |"""
         self.resource = ""
         """str: Resource record URI of the parent resource of the archival object"""
+        self.box = ""
+        """str: The top container type and indicator for the archival object"""
+        self.folder = ""
+        """str: The container instance child type and indicator for the archival object"""
+        self.item = ""
+        """str: The container instance grandchild type and indicator for the archival object"""
 
     def parse_archobj(self):
         """
@@ -259,34 +265,32 @@ class ArchivalObject:
                             complete_note += f'{note_component} '
                         self.extent = complete_note.strip()
             if key == "instances":
-                box = ""
-                folder = ""
-                item = ""
                 for instance in json_info["instances"]:
                     if "sub_container" in instance:
                         sc_indicator = ""
-                        sc_type = ""
-                        for key, value in instance["sub_container"].items():
-                            type_match = type_field_regex.match(key)
-                            indicator_match = indicator_field_regex.match(key)
+                        for sc_field, sc_value in instance["sub_container"].items():
+                            type_match = type_field_regex.match(sc_field)
+                            indicator_match = indicator_field_regex.match(sc_field)
                             if indicator_match:
                                 sc_indicator = instance["sub_container"][indicator_match.string]
-                            elif type_match:  # TODO: figure out a way to match indicator according to type before or after matching
-                                if value == "folder":
-                                    folder += value + f' {sc_indicator}'
-                                if value == "item":
-                                    item += value
-                                    item += value + f' {sc_indicator}'
-                        if key == "top_container":
-                            box_indicator = ""
-                            tc_type = ""
-                            for key, value in instance["sub_container"]["top_container"]["_resolved"].items():
-                                if key == "type":
-                                    tc_type = instance["sub_container"]["top_container"]["_resolved"]["type"]
-                                elif key == "indicator":
-                                    box_indicator = instance["sub_container"]["top_container"]["_resolved"]["indicator"]
-                            box = f'{tc_type} {box_indicator}'
-                print(f'{box, folder, item}')
+                                if self.folder:
+                                    self.folder += f' {sc_indicator}'
+                                if self.item:
+                                    self.item += f' {sc_indicator}'
+                            elif type_match:
+                                if sc_value == "folder":
+                                    self.folder += sc_value + f' {sc_indicator}'
+                                if sc_value == "item":
+                                    self.item += sc_value + f' {sc_indicator}'
+                            elif sc_field == "top_container":
+                                box_indicator = ""
+                                tc_type = ""
+                                for tc_field, tc_value in instance["sub_container"]["top_container"]["_resolved"].items():
+                                    if tc_field == "type":
+                                        tc_type = tc_value
+                                    elif tc_field == "indicator":
+                                        box_indicator = tc_value
+                                self.box = f'{tc_type} {box_indicator}'
             if key == "resource":
                 self.resource = json_info["resource"]["ref"]
 

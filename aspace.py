@@ -201,10 +201,12 @@ class ArchivalObject:
         """str: Resource record URI of the parent resource of the archival object"""
         self.box = ""
         """str: The top container type and indicator for the archival object"""
-        self.folder = ""
+        self.child = ""
         """str: The container instance child type and indicator for the archival object"""
-        self.item = ""
+        self.grandchild = ""
         """str: The container instance grandchild type and indicator for the archival object"""
+        self.record_id = ""
+        """str: Combined dlg_id with box #, folder #, and item # when available"""
 
     def parse_archobj(self):
         """
@@ -214,6 +216,9 @@ class ArchivalObject:
         """
         # print(self.arch_obj)
         # print("\n\n\n")
+        box_indicator = ""
+        child_indicator = ""
+        grandchild_indicator = ""
         json_info = json.loads(self.arch_obj["json"])
         for key, value in json_info.items():
             if key == "title":
@@ -267,23 +272,26 @@ class ArchivalObject:
             if key == "instances":
                 for instance in json_info["instances"]:
                     if "sub_container" in instance:
-                        sc_indicator = ""
                         for sc_field, sc_value in instance["sub_container"].items():
                             type_match = type_field_regex.match(sc_field)
                             indicator_match = indicator_field_regex.match(sc_field)
                             if indicator_match:
                                 sc_indicator = instance["sub_container"][indicator_match.string]
-                                if self.folder:
-                                    self.folder += f' {sc_indicator}'
-                                if self.item:
-                                    self.item += f' {sc_indicator}'
+                                if indicator_match.string[-1] == "2":
+                                    child_indicator = sc_indicator
+                                    if self.child:
+                                        self.child += f' {child_indicator}'
+                                elif indicator_match.string[-1] == "3":
+                                    grandchild_indicator = sc_indicator
+                                    if self.grandchild:
+                                        self.grandchild += f' {grandchild_indicator}'
                             elif type_match:
-                                if sc_value == "folder":
-                                    self.folder += sc_value + f' {sc_indicator}'
-                                if sc_value == "item":
-                                    self.item += sc_value + f' {sc_indicator}'
+                                type_indicator = instance["sub_container"][type_match.string]
+                                if type_match.string[-1] == "2":
+                                    self.child += sc_value + f' {child_indicator}'
+                                if type_match.string[-1] == "3":
+                                    self.grandchild += sc_value + f' {grandchild_indicator}'
                             elif sc_field == "top_container":
-                                box_indicator = ""
                                 tc_type = ""
                                 for tc_field, tc_value in instance["sub_container"]["top_container"]["_resolved"].items():
                                     if tc_field == "type":
@@ -293,6 +301,13 @@ class ArchivalObject:
                                 self.box = f'{tc_type} {box_indicator}'
             if key == "resource":
                 self.resource = json_info["resource"]["ref"]
+        indicators = [box_indicator, child_indicator, grandchild_indicator]
+        record_id_composite = f'{self.dlg_id}_'
+        for indicator in indicators:
+            if indicator:
+                int_indicator = int(indicator)
+                record_id_composite += f'{int_indicator:03}-'
+        self.record_id = record_id_composite[:-1]
 
     def get_resource_info(self, asp_client):  # TODO - need to only call this info once per spreadsheet or barcode - minimize API calls
         """

@@ -56,12 +56,16 @@ class Spreadsheet:
                 if "Box, Folder, and Item Number" == column:
                     cell_letter = utils.get_column_letter(coordinate[1])
                     cell_coordinate = f'{cell_letter}{row_number}'
-                    bfi = [arch_obj.box, arch_obj.folder, arch_obj.item]
+                    bfi = [arch_obj.box, arch_obj.child, arch_obj.grandchild]
                     bfi_str = ""
                     for container in bfi:
                         if container:
                             bfi_str += container + ", "
                     sheet[cell_coordinate] = bfi_str[:-2]
+                if "record_id" == column:
+                    cell_letter = utils.get_column_letter(coordinate[1])
+                    cell_coordinate = f'{cell_letter}{row_number}'
+                    sheet[cell_coordinate] = arch_obj.record_id
                 if "dcterms_title" == column:
                     cell_letter = utils.get_column_letter(coordinate[1])
                     cell_coordinate = f'{cell_letter}{row_number}'

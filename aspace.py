@@ -305,8 +305,11 @@ class ArchivalObject:
         record_id_composite = f'{self.dlg_id}_'
         for indicator in indicators:
             if indicator:
-                int_indicator = int(indicator)
-                record_id_composite += f'{int_indicator:03}-'
+                try:
+                    int_indicator = int(indicator)  # Failing here because child indicator is 1-6, which cannot be an in https://aspace-uga.galib.uga.edu/staff/resources/3155#tree::archival_object_384801
+                    record_id_composite += f'{int_indicator:03}-'
+                except:
+                    record_id_composite += f'{indicator}?-'  # TODO - highlight this cell if this happens
         self.record_id = record_id_composite[:-1]
 
     def get_resource_info(self, asp_client):  # TODO - need to only call this info once per spreadsheet or barcode - minimize API calls
@@ -320,7 +323,7 @@ class ArchivalObject:
         resource_info = asp_client.get(self.resource).json()
 
         # Get Language of Materials
-        self.language = resource_info["lang_materials"][0]["language_and_script"]["language"]  # need to get this from get_resource_info()
+        self.language = resource_info["lang_materials"][0]["language_and_script"]["language"]
 
         for key, value in resource_info.items():
             # Get Preferred Citation note
@@ -360,7 +363,7 @@ class ArchivalObject:
                     subject_json = asp_client.get(subject_ref, params={"resolve[]": True}).json()
                     for key, value in subject_json.items():
                         if key == "terms":
-                            # for term in subject_json["terms"]:  # TODO - remove ending period for terms if exists
+                            # for term in subject_json["terms"]:
                             if "term_type" in subject_json["terms"][0]:  # TODO - check with Kat - check the first term in subject for type only - otherwise have to check each subterm in subject for type - not sure if mixed subject types exist Ex. camp counselors (topical) -- Georgia (geographic) -- Clayton (geographic) -- Correspondence (topical)
                                 if subject_json["terms"][0]["term_type"] == "genre_form":
                                     if "." in subject_json["title"]:

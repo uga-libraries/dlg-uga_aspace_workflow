@@ -1,4 +1,5 @@
 import csv
+from loguru import logger
 from pathlib import Path
 from openpyxl import load_workbook, utils
 from openpyxl.styles import PatternFill
@@ -40,7 +41,14 @@ class Spreadsheet:
     def write_template(aspace_dlg_template, arch_obj, row_number):
         print(row_number)
         data_columns = {}
-        temp_wb = load_workbook(aspace_dlg_template)  # TODO - add check to see if spreadsheet is open, if so, ask user to close spreadsheet
+        # try:
+        #     test = open(aspace_dlg_template, "r")  # TODO - add check to see if spreadsheet is open, if so, ask user to close spreadsheet
+        # except OSError as open_error:
+        #     logger.error(f'Could not open {aspace_dlg_template}: {open_error}\n')
+        #     print(f'Could not open {aspace_dlg_template}, {open_error}\n'
+        #           f'Make sure to close the spreadsheet before continuing')
+        # else:
+        temp_wb = load_workbook(aspace_dlg_template)
         for sheet in temp_wb:
             for row in sheet.iter_rows(max_row=1, max_col=28):
                 for header in row:  # TODO - check if there are headers - don't want to write to blank sheet

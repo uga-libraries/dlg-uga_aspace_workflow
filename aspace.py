@@ -174,7 +174,8 @@ class ArchivalObject:
         """str: Dictionary of archival object metadata"""
         self.dlg_id = dlg_id
         """str: ID for DLG Collection ID column"""
-        self.arch_obj_uri = ""  # TODO - add arch_obj URI to spreadsheet
+        self.arch_obj_uri = ""
+        """str: ArchivesSpace URI for the archival object"""
         self.title = ""
         """str: Title of the archival object"""
         self.creator = ""  # need to get this from get_resource_info()
@@ -301,6 +302,8 @@ class ArchivalObject:
                                 self.box = f'{tc_type} {box_indicator}'
             if key == "resource":
                 self.resource = json_info["resource"]["ref"]
+            if key == "uri":
+                self.arch_obj_uri = json_info["uri"]
         indicators = [box_indicator, child_indicator, grandchild_indicator]
         record_id_composite = f'{self.dlg_id}_'
         for indicator in indicators:

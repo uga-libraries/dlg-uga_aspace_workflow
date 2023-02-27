@@ -28,14 +28,26 @@ class Spreadsheet:
                 for value in row:
                     if value == "barcode_u_sstr":
                         barcode_col = column_num
-                        # print(column_num)
                         pass
                     else:
                         column_num += 1
-                # print(row)
                 barcodes.append(row[barcode_col])
             barcodes.pop(0)
         return barcodes
+
+    @staticmethod
+    def get_cell_coordinate(coordinate, row_number):
+        """
+        Intakes cell coordinate number from spreadsheet and row number to reutn cell coordinate
+
+        :param tuple coordinate: cell coordinate in tuple
+        :param int row_number: the row number for each archival object being written
+
+        :return str cell_coordinate: the cell coordinate, ex. A3
+        """
+        cell_letter = utils.get_column_letter(coordinate[1])
+        cell_coordinate = f'{cell_letter}{row_number}'
+        return cell_coordinate
 
     @staticmethod
     def write_template(aspace_dlg_template, arch_obj, row_number):
@@ -68,76 +80,42 @@ class Spreadsheet:
                 data_columns["Archival object URI"] = utils.coordinate_to_tuple(cell_coordinate)
             for column, coordinate in data_columns.items():
                 if "DLG Collection ID" == column:
-                    cell_letter = utils.get_column_letter(coordinate[1])
-                    cell_coordinate = f'{cell_letter}{row_number}'
-                    sheet[cell_coordinate] = arch_obj.dlg_id
+                    sheet[Spreadsheet.get_cell_coordinate(coordinate, row_number)] = arch_obj.dlg_id
                 elif "Box, Folder, and Item Number" == column:
-                    cell_letter = utils.get_column_letter(coordinate[1])
-                    cell_coordinate = f'{cell_letter}{row_number}'
                     bfi = [arch_obj.box, arch_obj.child, arch_obj.grandchild]
                     bfi_str = ""
                     for container in bfi:
                         if container:
                             bfi_str += container + ", "
-                    sheet[cell_coordinate] = bfi_str[:-2]
+                    sheet[Spreadsheet.get_cell_coordinate(coordinate, row_number)] = bfi_str[:-2]
                 elif "record_id" == column:
-                    cell_letter = utils.get_column_letter(coordinate[1])
-                    cell_coordinate = f'{cell_letter}{row_number}'
-                    sheet[cell_coordinate] = arch_obj.record_id
+                    sheet[Spreadsheet.get_cell_coordinate(coordinate, row_number)] = arch_obj.record_id
                 elif "dcterms_title" == column:
-                    cell_letter = utils.get_column_letter(coordinate[1])
-                    cell_coordinate = f'{cell_letter}{row_number}'
-                    sheet[cell_coordinate] = arch_obj.title
+                    sheet[Spreadsheet.get_cell_coordinate(coordinate, row_number)] = arch_obj.title
                 elif "dcterms_creator" == column:
-                    cell_letter = utils.get_column_letter(coordinate[1])
-                    cell_coordinate = f'{cell_letter}{row_number}'
-                    sheet[cell_coordinate] = arch_obj.creator
+                    sheet[Spreadsheet.get_cell_coordinate(coordinate, row_number)] = arch_obj.creator
                 elif "dcterms_subject" == column:
-                    cell_letter = utils.get_column_letter(coordinate[1])
-                    cell_coordinate = f'{cell_letter}{row_number}'
-                    sheet[cell_coordinate] = arch_obj.subject
+                    sheet[Spreadsheet.get_cell_coordinate(coordinate, row_number)] = arch_obj.subject
                 elif "dcterms_description" == column:
-                    cell_letter = utils.get_column_letter(coordinate[1])
-                    cell_coordinate = f'{cell_letter}{row_number}'
-                    sheet[cell_coordinate] = arch_obj.description
+                    sheet[Spreadsheet.get_cell_coordinate(coordinate, row_number)] = arch_obj.description
                 elif "dc_date" == column:
-                    cell_letter = utils.get_column_letter(coordinate[1])
-                    cell_coordinate = f'{cell_letter}{row_number}'
-                    sheet[cell_coordinate] = arch_obj.date
+                    sheet[Spreadsheet.get_cell_coordinate(coordinate, row_number)] = arch_obj.date
                 elif "dcterms_spatial" == column:
-                    cell_letter = utils.get_column_letter(coordinate[1])
-                    cell_coordinate = f'{cell_letter}{row_number}'
-                    sheet[cell_coordinate] = arch_obj.subject_spatial
+                    sheet[Spreadsheet.get_cell_coordinate(coordinate, row_number)] = arch_obj.subject_spatial
                 elif "dcterms_medium" == column:
-                    cell_letter = utils.get_column_letter(coordinate[1])
-                    cell_coordinate = f'{cell_letter}{row_number}'
-                    sheet[cell_coordinate] = arch_obj.subject_medium
+                    sheet[Spreadsheet.get_cell_coordinate(coordinate, row_number)] = arch_obj.subject_medium
                 elif "extent" == column:
-                    cell_letter = utils.get_column_letter(coordinate[1])
-                    cell_coordinate = f'{cell_letter}{row_number}'
-                    sheet[cell_coordinate] = arch_obj.extent
+                    sheet[Spreadsheet.get_cell_coordinate(coordinate, row_number)] = arch_obj.extent
                 elif "dcterms_language" == column:
-                    cell_letter = utils.get_column_letter(coordinate[1])
-                    cell_coordinate = f'{cell_letter}{row_number}'
-                    sheet[cell_coordinate] = arch_obj.language
+                    sheet[Spreadsheet.get_cell_coordinate(coordinate, row_number)] = arch_obj.language
                 elif "dcterms_bibliographic_citation" == column:
-                    cell_letter = utils.get_column_letter(coordinate[1])
-                    cell_coordinate = f'{cell_letter}{row_number}'
-                    sheet[cell_coordinate] = arch_obj.citation
+                    sheet[Spreadsheet.get_cell_coordinate(coordinate, row_number)] = arch_obj.citation
                 elif "dlg_subject_personal" == column:
-                    cell_letter = utils.get_column_letter(coordinate[1])
-                    cell_coordinate = f'{cell_letter}{row_number}'
-                    sheet[cell_coordinate] = arch_obj.subject_personal
+                    sheet[Spreadsheet.get_cell_coordinate(coordinate, row_number)] = arch_obj.subject_personal
                 elif "holding institution" == column:
-                    cell_letter = utils.get_column_letter(coordinate[1])
-                    cell_coordinate = f'{cell_letter}{row_number}'
-                    sheet[cell_coordinate] = "Hargrett Library"
+                    sheet[Spreadsheet.get_cell_coordinate(coordinate, row_number)] = "Hargrett Library"
                 elif "public" == column:
-                    cell_letter = utils.get_column_letter(coordinate[1])
-                    cell_coordinate = f'{cell_letter}{row_number}'
-                    sheet[cell_coordinate] = "true"
+                    sheet[Spreadsheet.get_cell_coordinate(coordinate, row_number)] = "true"
                 elif "archival_object" == column:
-                    cell_letter = utils.get_column_letter(coordinate[1])
-                    cell_coordinate = f'{cell_letter}{row_number}'
-                    sheet[cell_coordinate] = arch_obj.arch_obj_uri
+                    sheet[Spreadsheet.get_cell_coordinate(coordinate, row_number)] = arch_obj.arch_obj_uri
         temp_wb.save(aspace_dlg_template)

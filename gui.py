@@ -1,15 +1,19 @@
 import aspace
 import gc
 import os
+import platform
 import PySimpleGUI as psg
 import re
 import spreadsheet
+import subprocess
 import sys
 import threading
 import time
 
 from loguru import logger
 from pathlib import Path
+
+WRITE_AOS_THREAD = "-WAOS_THREAD-"
 
 logger.remove()
 logger.add(str(Path('logs', 'log_{time:YYYY-MM-DD}.log')),
@@ -48,7 +52,7 @@ def run_gui():
                psg.InputText(default_text=defaults['_AS-DLG_FILE_'], key='_AS-DLG_FILE_')],
               [psg.Button(' START ', key='_WRITE_AOS_', disabled=False)],
               [psg.Output(size=(80, 18), key="_output_")],
-              [psg.Button(" Open ASpace > DLG Template File ", key="_OPEN_AS-DLG_")]]
+              [psg.Button(" Open ASpace > DLG Template File ", key="_OPEN_AS-DLG_", disabled=False)]]
 
     main_window = psg.Window('ASpace > DLG Workflow', layout, resizable=True)
     logger.info('Initiate GUI window')
@@ -62,94 +66,18 @@ def run_gui():
         if main_event == "_SAVE_REPO_":
             defaults["repo_default"] = main_values["_REPO_SELECT_"]
         if main_event == "_WRITE_AOS_":
-            #  1: grab top container spreadsheet, parse it and return a list of barcodes
-            #  2: take list of barcodes and feed them into aspace to get tc_uris or list of archival objects
-            #  3: for loop through list of archival objects - instance of ArchivalObject pass to spreadsheet.py and
-            #  write data - will have to make more calls to aspace to get resource level info.
-            defaults["_AS-DLG_FILE_"] = main_values["_AS-DLG_FILE_"]
-            ss_inst = spreadsheet.Spreadsheet
-            barcodes = ss_inst.get_barcodes(main_values['_TC_FILE_'])
-            row_num = 2
-            for barcode in barcodes:
-                # uri_error, tc_uri = aspace_instance.get_tcuri(barcode, repositories[main_values["_REPO_SELECT_"]])
-                #
-                # if uri_error is True:
-                #     for message in tc_uri:
-                #         print(message)
-                # else:
-                linked_objects, archobjs_error = aspace_instance.get_archobjs(barcode,
-                                                                              repositories[main_values["_REPO_SELECT_"]])
-                if archobjs_error:
-                    print(archobjs_error)
-                else:
-                    resource_links = {}
-                    resource_ids = []
-                    selections = []
-                    for linked_object in linked_objects:
-                        combined_aspace_id = ""
-                        # print(linked_object)
-                        parent_resource = aspace_instance.client.get(linked_object["resource"],
-                                                                     params={"resolve[]": True}).json()
-                        for key, value in parent_resource.items():
-                            id_match = id_field_regex.match(key)
-                            if id_match:
-                                combined_aspace_id += value + "-"
-                        combined_aspace_id = combined_aspace_id[:-1]
-                        if combined_aspace_id not in resource_ids:
-                            resource_ids.append(combined_aspace_id)
-                            resource_links[combined_aspace_id] = [linked_object]
-                        else:
-                            resource_links[combined_aspace_id].append(linked_object)
-                    if len(resource_ids) > 1:
-                        multres_layout = [[psg.Text("Choose which resource you want archival objects linked:")],
-                                          [psg.Listbox(values=resource_ids, key="_RES-IDS_",
-                                                       size=(30, 6))],
-                                          [psg.Button(" SELECT ", key="_MULTRES-SELECT_")]]
-
-                        multres_window = psg.Window('Select Resources', multres_layout, resizable=True)
-                        logger.info('Select Resources window')
-                        while True:
-                            multres_event, multres_values = multres_window.Read()
-                            if multres_event == 'Cancel' or multres_event is None or multres_event == "Exit":
-                                logger.info("User initiated closing Select Resources window")
-                                multres_window.close()
-                                break
-                            if multres_event == "_MULTRES-SELECT_":
-                                selections = multres_values["_RES-IDS_"]
-                                multres_window.close()
-                                break
-                    if selections:
-                        for resource in selections:
-                            if resource in resource_links:
-                                if collid_regex.findall(resource):
-                                    collnum = collid_regex.findall(resource)[0]
-                                else:
-                                    collnum = resource
-                                dlg_id = f'guan_{collnum}'
-                                for linked_object in resource_links[resource]:
-                                    arch_obj = aspace.ArchivalObject(linked_object, dlg_id)
-                                    arch_obj.parse_archobj()
-                                    arch_obj.get_resource_info(aspace_instance.client)
-                                    # print(arch_obj.__dict__)
-                                    ss_inst.write_template(main_values["_AS-DLG_FILE_"], arch_obj, row_num)
-                                    row_num += 1
-                                    print("\n\n\n")
-                    else:
-                        for res_id, linked_object in resource_links.items():
-                            if collid_regex.findall(res_id):
-                                collnum = collid_regex.findall(res_id)[0]
-                            else:
-                                collnum = res_id
-                            dlg_id = f'guan_{collnum}'
-                            for linked_object in linked_objects:
-                                arch_obj = aspace.ArchivalObject(linked_object, dlg_id)
-                                arch_obj.parse_archobj()
-                                arch_obj.get_resource_info(aspace_instance.client)
-                                # print(arch_obj.__dict__)
-                                ss_inst.write_template(main_values["_AS-DLG_FILE_"], arch_obj, row_num)
-                                row_num += 1
-                                print("\n\n\n")
-            # pass
+            if not main_values["_REPO_SELECT_"]:
+                psg.Popup("WARNING!\nPlease select a repository")
+                logger.warning("User did not select a repository")
+            else:
+                args = (defaults, main_values, aspace_instance, repositories, main_window)
+                start_thread(write_aos, args, main_window)
+                logger.info("WRITE_AOS_THREAD started")
+        if main_event in (WRITE_AOS_THREAD):
+            main_window[f'{"_WRITE_AOS_"}'].update(disabled=False)
+            main_window[f'{"_OPEN_AS-DLG_"}'].update(disabled=False)
+        if main_event == "_OPEN_AS-DLG_":
+            open_file(main_values["_AS-DLG_FILE_"])
 
 
 def get_aspace_login(defaults):
@@ -209,6 +137,125 @@ def get_aspace_login(defaults):
         return close_program, aspace_instance, repositories
 
 
+def write_aos(defaults, main_values, aspace_instance, repositories, gui_window):
+    defaults["_AS-DLG_FILE_"] = main_values["_AS-DLG_FILE_"]
+    ss_inst = spreadsheet.Spreadsheet
+    barcodes = ss_inst.get_barcodes(main_values['_TC_FILE_'])
+    row_num = 2
+    for barcode in barcodes:
+        # uri_error, tc_uri = aspace_instance.get_tcuri(barcode, repositories[main_values["_REPO_SELECT_"]])
+        #
+        # if uri_error is True:
+        #     for message in tc_uri:
+        #         print(message)
+        # else:
+        linked_objects, archobjs_error = aspace_instance.get_archobjs(barcode,
+                                                                      repositories[main_values["_REPO_SELECT_"]])
+        if archobjs_error:
+            print(archobjs_error)
+        else:
+            resource_links, resource_ids, selections, cancel = parse_linked_objs(linked_objects,
+                                                                                 aspace_instance)
+            if cancel is not True:
+                if selections:
+                    for resource in selections:
+                        if resource in resource_links:
+                            if collid_regex.findall(resource):
+                                collnum = collid_regex.findall(resource)[0]
+                            else:
+                                collnum = resource
+                            dlg_id = f'guan_{collnum}'
+                            for linked_object in resource_links[resource]:
+                                arch_obj = aspace.ArchivalObject(linked_object, dlg_id)
+                                arch_obj.parse_archobj()
+                                arch_obj.get_resource_info(aspace_instance.client)
+                                ss_inst.write_template(main_values["_AS-DLG_FILE_"], arch_obj, row_num)
+                                row_num += 1
+                                print(f'{arch_obj.record_id} added\n')
+                else:
+                    for res_id, linked_object in resource_links.items():
+                        if collid_regex.findall(res_id):
+                            collnum = collid_regex.findall(res_id)[0]
+                        else:
+                            collnum = res_id
+                        dlg_id = f'guan_{collnum}'
+                        for linked_object in linked_objects:
+                            arch_obj = aspace.ArchivalObject(linked_object, dlg_id)
+                            arch_obj.parse_archobj()
+                            arch_obj.get_resource_info(aspace_instance.client)
+                            ss_inst.write_template(main_values["_AS-DLG_FILE_"], arch_obj, row_num)
+                            row_num += 1
+                            print(f'{arch_obj.record_id} added\n')
+    trailing_line = 76 - len(f'Finished {str(row_num-2)} exports') - (len(str(row_num-2)) - 1)
+    print("\n" + "-" * 55 + "Finished {} exports".format(str(row_num-2)) + "-" * trailing_line + "\n")
+    gui_window.write_event_value('-WAOS_THREAD-', (threading.current_thread().name,))
+
+
+def parse_linked_objs(linked_objects, aspace_instance):
+    resource_links = {}
+    resource_ids = []
+    selections = []
+    cancel = None
+    for linked_object in linked_objects:
+        combined_aspace_id = ""
+        parent_resource = aspace_instance.client.get(linked_object["resource"],
+                                                     params={"resolve[]": True}).json()
+        for resource_field, resource_value in parent_resource.items():
+            id_match = id_field_regex.match(resource_field)
+            if id_match:
+                combined_aspace_id += resource_value + "-"
+        combined_aspace_id = combined_aspace_id[:-1]
+        if combined_aspace_id not in resource_ids:
+            resource_ids.append(combined_aspace_id)
+            resource_links[combined_aspace_id] = [linked_object]
+        else:
+            resource_links[combined_aspace_id].append(linked_object)
+    if len(resource_ids) > 1:
+        selections, cancel = select_resource(resource_ids)
+    return resource_links, resource_ids, selections, cancel
+
+
+def select_resource(resource_ids):
+    selections = []
+    cancel = None
+    multres_layout = [[psg.Text("Choose which resource you want archival objects linked:")],
+                      [psg.Listbox(values=resource_ids, key="_RES-IDS_",
+                                   size=(30, 6))],
+                      [psg.Button(" SELECT ", key="_MULTRES-SELECT_")]]
+
+    multres_window = psg.Window('Select Resources', multres_layout, resizable=True)
+    logger.info('Select Resources window')
+    while True:
+        multres_event, multres_values = multres_window.Read()
+        if multres_event == 'Cancel' or multres_event is None or multres_event == "Exit":
+            logger.info("User initiated closing Select Resources window")
+            cancel = True
+            multres_window.close()
+            break
+        if multres_event == "_MULTRES-SELECT_":
+            selections = multres_values["_RES-IDS_"]
+            multres_window.close()
+            break
+    return selections, cancel
+
+
+def open_file(filepath):
+    """
+    Takes a filepath and opens the folder according to Windows, Mac, or Linux.
+    Args:
+        filepath (str): the filepath of the folder/directory a user wants to open
+    Returns:
+        None
+    """
+    logger.info(f'Fetching filepath: {filepath}')
+    if platform.system() == "Windows":
+        os.startfile(filepath)
+    elif platform.system() == "Darwin":
+        subprocess.Popen(["open", filepath])
+    else:
+        subprocess.Popen(["xdg-open", filepath])
+
+
 def delete_log_files():  # unittest for this? how?
     """
     Deletes log file(s) found in logs folder if file(s) are older than 1 month.
@@ -230,7 +277,7 @@ def delete_log_files():  # unittest for this? how?
                     logger.error(f'Error deleting logfile {logfile}:\n{delete_log_error}')
 
 
-def start_thread(function, args, gui_window):  # TODO: implement threading so Windows doesn't try to kill the app
+def start_thread(function, args, gui_window):
     """
     Starts a thread and disables buttons to prevent multiple requests/threads.
 
@@ -244,6 +291,7 @@ def start_thread(function, args, gui_window):  # TODO: implement threading so Wi
     ead_thread = threading.Thread(target=function, args=args)
     ead_thread.start()
     gui_window[f'{"_WRITE_AOS_"}'].update(disabled=True)
+    gui_window[f'{"_OPEN_AS-DLG_"}'].update(disabled=True)
 
 
 if __name__ == "__main__":

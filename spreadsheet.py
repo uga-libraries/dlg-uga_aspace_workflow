@@ -6,9 +6,8 @@ from openpyxl.styles import PatternFill
 
 
 class Spreadsheet:
-    #  This will take the spreadsheet of top containers and parse them for aspace and write the spreadsheet template
-    #      data to the template
-    pass
+    """Take the spreadsheet of top containers and parse them for aspace and write the spreadsheet template data to the
+    template provided by the user"""
 
     @staticmethod
     def get_barcodes(tc_spreadsheet):
@@ -69,15 +68,15 @@ class Spreadsheet:
         # else:
         temp_wb = load_workbook(aspace_dlg_template)
         for sheet in temp_wb:
-            for row in sheet.iter_rows(max_row=1, max_col=28):
+            for row in sheet.iter_rows(max_row=1, max_col=28):  # TODO - it's adding the Archival Object URI to the 29th column, but the 28th is blank...
                 for header in row:  # TODO - check if there are headers - don't want to write to blank sheet
                     data_columns[header.value] = utils.coordinate_to_tuple(header.coordinate)
-            if "archival_object" not in data_columns:
+            if "Archival Object URI" not in data_columns:
                 column_num = len(data_columns) + 1
                 column_letter = utils.get_column_letter(column_num)
                 cell_coordinate = f'{column_letter}1'
-                sheet[cell_coordinate] = "Archival object URI"
-                data_columns["Archival object URI"] = utils.coordinate_to_tuple(cell_coordinate)
+                sheet[cell_coordinate] = "Archival Object URI"
+                data_columns["Archival Object URI"] = utils.coordinate_to_tuple(cell_coordinate)
             for column, coordinate in data_columns.items():
                 if "DLG Collection ID" == column:
                     sheet[Spreadsheet.get_cell_coordinate(coordinate, row_number)] = arch_obj.dlg_id
@@ -116,6 +115,6 @@ class Spreadsheet:
                     sheet[Spreadsheet.get_cell_coordinate(coordinate, row_number)] = "Hargrett Library"
                 elif "public" == column:
                     sheet[Spreadsheet.get_cell_coordinate(coordinate, row_number)] = "true"
-                elif "archival_object" == column:
+                elif "Archival Object URI" == column:
                     sheet[Spreadsheet.get_cell_coordinate(coordinate, row_number)] = arch_obj.arch_obj_uri
         temp_wb.save(aspace_dlg_template)

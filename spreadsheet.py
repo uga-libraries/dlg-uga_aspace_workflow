@@ -68,11 +68,13 @@ class Spreadsheet:
         # else:
         temp_wb = load_workbook(aspace_dlg_template)
         for sheet in temp_wb:
-            for row in sheet.iter_rows(max_row=1, max_col=28):  # TODO - it's adding the Archival Object URI to the 29th column, but the 28th is blank...
+            for row in sheet.iter_rows(max_row=1, max_col=28):
                 for header in row:  # TODO - check if there are headers - don't want to write to blank sheet
-                    data_columns[header.value] = utils.coordinate_to_tuple(header.coordinate)
+                    if header.value is not None:
+                        data_columns[header.value] = utils.coordinate_to_tuple(header.coordinate)
             if "Archival Object URI" not in data_columns:
-                column_num = len(data_columns) + 1
+                data_list = list(data_columns.items())
+                column_num = int(data_list[-1][1][1]) + 1  # get the last column's number value from converted data_list
                 column_letter = utils.get_column_letter(column_num)
                 cell_coordinate = f'{column_letter}1'
                 sheet[cell_coordinate] = "Archival Object URI"
@@ -88,7 +90,14 @@ class Spreadsheet:
                             bfi_str += container + ", "
                     sheet[Spreadsheet.get_cell_coordinate(coordinate, row_number)] = bfi_str[:-2]
                 elif "record_id" == column:
-                    sheet[Spreadsheet.get_cell_coordinate(coordinate, row_number)] = arch_obj.record_id
+                    if "?" in arch_obj.record_id:
+                        sheet[Spreadsheet.get_cell_coordinate(coordinate, row_number)] = arch_obj.record_id
+                        for cell in sheet[f'{row_number}:{row_number}']:
+                            cell.fill = PatternFill(start_color='FFFF0000',
+                                                    end_color='FFFF0000',
+                                                    fill_type='solid')
+                    else:
+                        sheet[Spreadsheet.get_cell_coordinate(coordinate, row_number)] = arch_obj.record_id
                 elif "dcterms_title" == column:
                     sheet[Spreadsheet.get_cell_coordinate(coordinate, row_number)] = arch_obj.title
                 elif "dcterms_creator" == column:

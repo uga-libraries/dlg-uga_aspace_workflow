@@ -61,7 +61,6 @@ def run_gui():
         main_event, main_values = main_window.Read()
         if main_event == 'Cancel' or main_event is None or main_event == "Exit":
             logger.info("User initiated closing program")
-            main_window.close()
             break
         if main_event == "_SAVE_REPO_":
             defaults["repo_default"] = main_values["_REPO_SELECT_"]
@@ -138,10 +137,20 @@ def get_aspace_login(defaults):
 
 
 def write_aos(defaults, main_values, aspace_instance, repositories, gui_window):
+    """
+    Parses provided spreadsheet for barcodes, searches them in ASpace, parses returned archival objects, and writes to
+    user provided spreadsheet template
+
+    :param dict defaults: PySimpleGUI default defaults dict for user defaults. Did I say default enough?
+    :param main_values: PySimpleGUI main window values
+    :param aspace_instance: Instance of the ASpace class, used for making requests to the API
+    :param dict repositories: All the repositories and their IDs in an ASpace instance
+    :param gui_window: PySimpleGUI's window class instance, used for tracking threads
+    """
     defaults["_AS-DLG_FILE_"] = main_values["_AS-DLG_FILE_"]
     ss_inst = spreadsheet.Spreadsheet
     barcodes = ss_inst.get_barcodes(main_values['_TC_FILE_'])
-    row_num = 2
+    row_num = 2  # 2 because 1 is header row
     for barcode in barcodes:
         # uri_error, tc_uri = aspace_instance.get_tcuri(barcode, repositories[main_values["_REPO_SELECT_"]])
         #
@@ -154,8 +163,7 @@ def write_aos(defaults, main_values, aspace_instance, repositories, gui_window):
         if archobjs_error:
             print(archobjs_error)
         else:
-            resource_links, resource_ids, selections, cancel = parse_linked_objs(linked_objects,
-                                                                                 aspace_instance)
+            resource_links, selections, cancel = parse_linked_objs(linked_objects, aspace_instance)
             if cancel is not True:
                 if selections:
                     for resource in selections:
@@ -192,6 +200,17 @@ def write_aos(defaults, main_values, aspace_instance, repositories, gui_window):
 
 
 def parse_linked_objs(linked_objects, aspace_instance):
+    """
+    Parses a returned list of linked archival objects to create resource ids, dict with resource_id key and archival
+    object JSON as value, and selections if a user needs to select a specific resource record
+
+    :param list linked_objects: list of JSON dictionaries of all linked archival objects associated with a top container
+    :param aspace_instance: instance of the ASpace class, used for client requests
+
+    :return dict resource_links: key = resource ID, value = list of linked archival objects for that resource
+    :return list selections: should be a list with 1 string of the resource ID a user selects with select_resource()
+    :return bool cancel: If user exits select_resource() GUI window, set to True to not write archival objects
+    """
     resource_links = {}
     resource_ids = []
     selections = []
@@ -212,10 +231,18 @@ def parse_linked_objs(linked_objects, aspace_instance):
             resource_links[combined_aspace_id].append(linked_object)
     if len(resource_ids) > 1:
         selections, cancel = select_resource(resource_ids)
-    return resource_links, resource_ids, selections, cancel
+    return resource_links, selections, cancel
 
 
 def select_resource(resource_ids):
+    """
+    GUI window for a user to select from multiple resources associated with a top container
+
+    :param list resource_ids: resource ids for user to select ex. ms1238a
+
+    :return list selections: resource id selected by the user
+    :return bool cancel: if a user wants to cancel selection, cancel = True
+    """
     selections = []
     cancel = None
     multres_layout = [[psg.Text("Choose which resource you want archival objects linked:")],
@@ -242,10 +269,8 @@ def select_resource(resource_ids):
 def open_file(filepath):
     """
     Takes a filepath and opens the folder according to Windows, Mac, or Linux.
-    Args:
-        filepath (str): the filepath of the folder/directory a user wants to open
-    Returns:
-        None
+
+    :param str filepath: the filepath of the folder/directory a user wants to open
     """
     logger.info(f'Fetching filepath: {filepath}')
     if platform.system() == "Windows":

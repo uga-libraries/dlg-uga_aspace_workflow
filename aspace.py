@@ -153,14 +153,6 @@ class ASpace:
         return ao_results, archobjs_error
 
 
-# aspace_connection = ASpace(as_un, as_pw, as_api)
-# aspace_connection.aspace_login()
-# barcode = 32108050893687  # use these for unittests
-# repository = 4  # use these for unittests
-# tc_uri = ['/repositories/4/top_containers/45245']  # aspace_connection.get_tcuri(barcode, repository)
-# aspace_connection.get_archobjs(tc_uri)
-
-
 class ArchivalObject:
 
     def __init__(self, archival_object, dlg_id):
@@ -179,17 +171,17 @@ class ArchivalObject:
         self.title = ""
         """str: Title of the archival object"""
         self.creator = ""  # need to get this from get_resource_info()
-        """str: Creator(s) of the collection, multiple separated by | |"""
+        """str: Creator(s) of the collection, multiple separated by ||"""
         self.subject = ""  # need to get this from get_resource_info()
-        """str: Subject terms for resource, multiple separated by | |"""
+        """str: Subject terms for resource, multiple separated by ||"""
         self.description = ""
         """str: Description of the archival object, found in scope and content note"""
         self.date = ""
         """str: Date of the archival object, formatted YYYY-MM-DD, YYYY-MM, YYYY or YYYY/YYYY"""
         self.subject_spatial = ""  # need to get this from get_resource_info()
-        """str: Subjects geographic/spatial of the resource, multiple separated by | |"""
+        """str: Subjects geographic/spatial of the resource, multiple separated by ||"""
         self.subject_medium = ""  # need to get this from get_resource_info()
-        """str: Subjects medium/genre/format of the resource, multiple separated by | |"""
+        """str: Subjects medium/genre/format of the resource, multiple separated by ||"""
         self.extent = ""
         """str: Extent note of the archival object, if available"""
         self.language = ""  # need to get this from get_resource_info()
@@ -197,7 +189,7 @@ class ArchivalObject:
         self.citation = ""
         """str: Preferred citation of the resource"""
         self.subject_personal = ""  # need to get this from get_resource_info()
-        """str: Subject person of the resource, multiple separated by | |"""
+        """str: Subject person of the resource, multiple separated by ||"""
         self.resource = ""
         """str: Resource record URI of the parent resource of the archival object"""
         self.box = ""
@@ -312,7 +304,7 @@ class ArchivalObject:
                     int_indicator = int(indicator)  # Failing here because child indicator is 1-6, which cannot be an in https://aspace-uga.galib.uga.edu/staff/resources/3155#tree::archival_object_384801
                     record_id_composite += f'{int_indicator:03}-'
                 except:
-                    record_id_composite += f'{indicator}?-'  # TODO - highlight this cell if this happens
+                    record_id_composite += f'{indicator}?-'
         self.record_id = record_id_composite[:-1]
 
     def get_resource_info(self, asp_client):  # TODO - need to only call this info once per spreadsheet or barcode - minimize API calls

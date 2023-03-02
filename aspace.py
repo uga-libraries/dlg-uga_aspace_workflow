@@ -359,7 +359,7 @@ class ArchivalObject:
                     for key, value in subject_json.items():
                         if key == "terms":
                             # for term in subject_json["terms"]:
-                            if "term_type" in subject_json["terms"][0]:  # TODO - check with Kat - check the first term in subject for type only - otherwise have to check each subterm in subject for type - not sure if mixed subject types exist Ex. camp counselors (topical) -- Georgia (geographic) -- Clayton (geographic) -- Correspondence (topical)
+                            if "term_type" in subject_json["terms"][0]:
                                 if subject_json["terms"][0]["term_type"] == "genre_form":
                                     if "." in subject_json["title"]:
                                         mediums += subject_json["title"].rstrip(".") + "||"

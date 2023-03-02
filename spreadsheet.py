@@ -69,7 +69,7 @@ class Spreadsheet:
         temp_wb = load_workbook(aspace_dlg_template)
         for sheet in temp_wb:
             for row in sheet.iter_rows(max_row=1, max_col=28):
-                for header in row:  # TODO - check if there are headers - don't want to write to blank sheet
+                for header in row:
                     if header.value is not None:
                         data_columns[header.value] = utils.coordinate_to_tuple(header.coordinate)
             if "Archival Object URI" not in data_columns:

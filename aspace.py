@@ -5,7 +5,7 @@ from dateutil.parser import *
 import urllib.parse
 import asnake.logging as logging
 
-from secrets import *
+from gui import logger
 from asnake.client import ASnakeClient
 from asnake.client.web_client import ASnakeAuthError
 
@@ -216,28 +216,28 @@ class ArchivalObject:
 
         :return None:
         """
-        # print(self.arch_obj)
-        # print("\n\n\n")
         box_indicator = ""
         child_indicator = ""
         grandchild_indicator = ""
         json_info = json.loads(self.arch_obj["json"])
+
+        # Get title
         for key, value in json_info.items():
             if key == "title":
                 self.title = json_info["title"]
-
+            # Get dates
             if key == "dates":
                 begin = ""
                 end = ""
                 express_date = ""
                 if json_info["dates"]:
                     for date in json_info["dates"]:
-                        for key, value in date.items():  # TODO - need to change format: YYYY-MM-DD, YYYY-MM, YYYY or YYYY/YYYY
-                            if key == "begin":
+                        for date_field, date_value in date.items():  # TODO - need to change format: YYYY-MM-DD, YYYY-MM, YYYY or YYYY/YYYY
+                            if date_field == "begin":
                                 begin = date["begin"]
-                            if key == "end":
+                            if date_field == "end":
                                 end = date["end"]
-                            if key == "expression":
+                            if date_field == "expression":
                                 express_date = date["expression"]  # TODO - stuck on how to normalize dates
                 if begin and not end:
                     self.date = f'{begin}'
@@ -247,7 +247,7 @@ class ArchivalObject:
                     self.date = f'{begin}/{end}'
                 elif express_date:
                     self.date = f'{express_date}'
-
+            # Get notes
             if key == "notes":
                 for note in json_info["notes"]:
                     if note["type"] == "scopecontent":
@@ -260,7 +260,6 @@ class ArchivalObject:
                                 if "content" in subnote:
                                     complete_note += subnote["content"]
                         self.description = complete_note.strip()
-                        # self.description = note["content"]
                     if note["type"] == "prefercite":
                         complete_note = ""
                         for note_component in note["content"]:
@@ -271,6 +270,7 @@ class ArchivalObject:
                         for note_component in note["content"]:
                             complete_note += f'{note_component} '
                         self.extent = complete_note.strip()
+            # Get Box, Child, Grandchild
             if key == "instances":
                 for instance in json_info["instances"]:
                     if "sub_container" in instance:
@@ -301,22 +301,28 @@ class ArchivalObject:
                                     elif tc_field == "indicator":
                                         box_indicator = tc_value
                                 self.box = f'{tc_type} {box_indicator}'
+            # Get resource URI
             if key == "resource":
                 self.resource = json_info["resource"]["ref"]
                 if json_info["resource"]["ref"] != ArchivalObject.resource_uri:
                     ArchivalObject.get_resource_info(self, asp_client)
+            # Get archival object URI
             if key == "uri":
                 self.arch_obj_uri = json_info["uri"]
+        # Create record_id for DLG
         indicators = [box_indicator, child_indicator, grandchild_indicator]
         record_id_composite = f'{self.dlg_id}_'
         for indicator in indicators:
             if indicator:
                 try:
-                    int_indicator = int(indicator)  # Failing here because child indicator is 1-6, which cannot be an in https://aspace-uga.galib.uga.edu/staff/resources/3155#tree::archival_object_384801
-                    record_id_composite += f'{int_indicator:03}-'
+                    int_indicator = int(indicator)
                 except:
+                    logger.info(f'TypeError with: {self.arch_obj_uri}\n{indicators}')
                     record_id_composite += f'{indicator}?-'
-        self.record_id = record_id_composite[:-1]
+                else:
+                    record_id_composite += f'{int_indicator:03}-'
+                finally:
+                    self.record_id = record_id_composite[:-1]
 
     def get_resource_info(self, asp_client):
         """

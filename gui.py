@@ -175,7 +175,7 @@ def write_aos(defaults, main_values, aspace_instance, repositories, gui_window):
                             dlg_id = f'guan_{collnum}'
                             for linked_object in resource_links[resource]:
                                 arch_obj = aspace.ArchivalObject(linked_object, dlg_id)
-                                arch_obj.parse_archobj()
+                                arch_obj.parse_archobj(aspace_instance.client)
                                 arch_obj.get_resource_info(aspace_instance.client)
                                 ss_inst.write_template(main_values["_AS-DLG_FILE_"], arch_obj, row_num)
                                 row_num += 1
@@ -189,7 +189,7 @@ def write_aos(defaults, main_values, aspace_instance, repositories, gui_window):
                         dlg_id = f'guan_{collnum}'
                         for linked_object in linked_objects:
                             arch_obj = aspace.ArchivalObject(linked_object, dlg_id)
-                            arch_obj.parse_archobj()
+                            arch_obj.parse_archobj(aspace_instance.client)
                             arch_obj.get_resource_info(aspace_instance.client)
                             ss_inst.write_template(main_values["_AS-DLG_FILE_"], arch_obj, row_num)
                             row_num += 1

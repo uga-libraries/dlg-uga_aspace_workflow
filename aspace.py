@@ -155,6 +155,15 @@ class ASpace:
 
 class ArchivalObject:
 
+    resource_uri = ""
+    resource_lang = ""
+    resource_citation = ""
+    resource_creator = ""
+    resource_subpers = ""
+    resource_subj = ""
+    resource_subjmed = ""
+    resource_subjspatial = ""
+
     def __init__(self, archival_object, dlg_id):
         """
         Archival object with specific fields for DLG workflow
@@ -170,25 +179,25 @@ class ArchivalObject:
         """str: ArchivesSpace URI for the archival object"""
         self.title = ""
         """str: Title of the archival object"""
-        self.creator = ""  # need to get this from get_resource_info()
+        self.creator = ArchivalObject.resource_creator  # need to get this from get_resource_info()
         """str: Creator(s) of the collection, multiple separated by ||"""
-        self.subject = ""  # need to get this from get_resource_info()
+        self.subject = ArchivalObject.resource_subj  # need to get this from get_resource_info()
         """str: Subject terms for resource, multiple separated by ||"""
         self.description = ""
         """str: Description of the archival object, found in scope and content note"""
         self.date = ""
         """str: Date of the archival object, formatted YYYY-MM-DD, YYYY-MM, YYYY or YYYY/YYYY"""
-        self.subject_spatial = ""  # need to get this from get_resource_info()
+        self.subject_spatial = ArchivalObject.resource_subjspatial  # need to get this from get_resource_info()
         """str: Subjects geographic/spatial of the resource, multiple separated by ||"""
-        self.subject_medium = ""  # need to get this from get_resource_info()
+        self.subject_medium = ArchivalObject.resource_subjmed  # need to get this from get_resource_info()
         """str: Subjects medium/genre/format of the resource, multiple separated by ||"""
         self.extent = ""
         """str: Extent note of the archival object, if available"""
-        self.language = ""  # need to get this from get_resource_info()
+        self.language = ArchivalObject.resource_lang  # need to get this from get_resource_info()
         """str: Language of material of the resource, usually eng"""
-        self.citation = ""
+        self.citation = ArchivalObject.resource_citation
         """str: Preferred citation of the resource"""
-        self.subject_personal = ""  # need to get this from get_resource_info()
+        self.subject_personal = ArchivalObject.resource_subpers  # need to get this from get_resource_info()
         """str: Subject person of the resource, multiple separated by ||"""
         self.resource = ""
         """str: Resource record URI of the parent resource of the archival object"""
@@ -201,7 +210,7 @@ class ArchivalObject:
         self.record_id = ""
         """str: Combined dlg_id with box #, folder #, and item # when available"""
 
-    def parse_archobj(self):
+    def parse_archobj(self, asp_client):
         """
         Parses an archival object json record to assign instance variables
 
@@ -294,6 +303,8 @@ class ArchivalObject:
                                 self.box = f'{tc_type} {box_indicator}'
             if key == "resource":
                 self.resource = json_info["resource"]["ref"]
+                if json_info["resource"]["ref"] != ArchivalObject.resource_uri:
+                    ArchivalObject.get_resource_info(self, asp_client)
             if key == "uri":
                 self.arch_obj_uri = json_info["uri"]
         indicators = [box_indicator, child_indicator, grandchild_indicator]
@@ -307,7 +318,7 @@ class ArchivalObject:
                     record_id_composite += f'{indicator}?-'
         self.record_id = record_id_composite[:-1]
 
-    def get_resource_info(self, asp_client):  # TODO - need to only call this info once per spreadsheet or barcode - minimize API calls
+    def get_resource_info(self, asp_client):
         """
         Intakes an ASpace client and gets the resource info for an archival object and assigns instance variables
 
@@ -317,8 +328,11 @@ class ArchivalObject:
         """
         resource_info = asp_client.get(self.resource).json()
 
+        # Set resource_uri
+        ArchivalObject.resource_uri = resource_info["uri"]
+
         # Get Language of Materials
-        self.language = resource_info["lang_materials"][0]["language_and_script"]["language"]
+        ArchivalObject.resource_lang = resource_info["lang_materials"][0]["language_and_script"]["language"]
 
         for key, value in resource_info.items():
             # Get Preferred Citation note
@@ -327,7 +341,7 @@ class ArchivalObject:
                     if "type" in note:
                         if note["type"] == "prefercite":
                             for subnote in note["subnotes"]:
-                                self.citation = subnote["content"]
+                                ArchivalObject.resource_citation = subnote["content"]
             # Get Creator
             if "linked_agents" == key:
                 creators = ""
@@ -346,8 +360,8 @@ class ArchivalObject:
                                     personals += person_json["title"].rstrip(".") + "||"
                                 else:
                                     personals += person_json["title"] + "||"
-                self.creator = creators[:-2]
-                self.subject_personal = personals[:-2]
+                ArchivalObject.resource_creator = creators[:-2]
+                ArchivalObject.resource_subpers = personals[:-2]
             # Get Subjects
             if "subjects" == key:
                 subjects = ""
@@ -358,7 +372,6 @@ class ArchivalObject:
                     subject_json = asp_client.get(subject_ref, params={"resolve[]": True}).json()
                     for key, value in subject_json.items():
                         if key == "terms":
-                            # for term in subject_json["terms"]:
                             if "term_type" in subject_json["terms"][0]:
                                 if subject_json["terms"][0]["term_type"] == "genre_form":
                                     if "." in subject_json["title"]:
@@ -375,7 +388,7 @@ class ArchivalObject:
                                         spatials += subject_json["title"].rstrip(".") + "||"
                                     else:
                                         spatials += subject_json["title"] + "||"
-                self.subject = subjects[:-2]  # no type, need to get this from get_resource_info()
-                self.subject_spatial = spatials[:-2]  # need to get this from get_resource_info()
-                self.subject_medium = mediums[:-2]  # need to get this from get_resource_info()
+                ArchivalObject.resource_subj = subjects[:-2]
+                ArchivalObject.resource_subjspatial = spatials[:-2]
+                ArchivalObject.resource_subjmed = mediums[:-2]
 

@@ -1,7 +1,7 @@
 import json
 import requests
 import re
-from dateutil.parser import *
+# from dateutil.parser import *
 import urllib.parse
 import asnake.logging as logging
 
@@ -156,13 +156,21 @@ class ASpace:
 class ArchivalObject:
 
     resource_uri = ""
+    """str: ArchivesSpace URI for the parent resource"""    # TODO: Split this info into another class "ResourceObject" with these class variable as instance variables
     resource_lang = ""
+    """str: Language of materials for the parent resource record"""
     resource_citation = ""
+    """str: Preferred citation note for the parent resource record"""
     resource_creator = ""
+    """str: Agent with type Creator for the parent resource record"""
     resource_subpers = ""
+    """str: Agent with type Subject for the parent resource record"""
     resource_subj = ""
+    """str: Subject with type topical for the parent resource record"""
     resource_subjmed = ""
+    """str: Subject with type genre_form for the parent resource record"""
     resource_subjspatial = ""
+    """str: Subject with type geographic for the parent resource record"""
 
     def __init__(self, archival_object, dlg_id):
         """
@@ -179,25 +187,25 @@ class ArchivalObject:
         """str: ArchivesSpace URI for the archival object"""
         self.title = ""
         """str: Title of the archival object"""
-        self.creator = ArchivalObject.resource_creator  # need to get this from get_resource_info()
+        self.creator = ArchivalObject.resource_creator
         """str: Creator(s) of the collection, multiple separated by ||"""
-        self.subject = ArchivalObject.resource_subj  # need to get this from get_resource_info()
+        self.subject = ArchivalObject.resource_subj
         """str: Subject terms for resource, multiple separated by ||"""
         self.description = ""
         """str: Description of the archival object, found in scope and content note"""
         self.date = ""
         """str: Date of the archival object, formatted YYYY-MM-DD, YYYY-MM, YYYY or YYYY/YYYY"""
-        self.subject_spatial = ArchivalObject.resource_subjspatial  # need to get this from get_resource_info()
+        self.subject_spatial = ArchivalObject.resource_subjspatial
         """str: Subjects geographic/spatial of the resource, multiple separated by ||"""
-        self.subject_medium = ArchivalObject.resource_subjmed  # need to get this from get_resource_info()
+        self.subject_medium = ArchivalObject.resource_subjmed
         """str: Subjects medium/genre/format of the resource, multiple separated by ||"""
         self.extent = ""
         """str: Extent note of the archival object, if available"""
-        self.language = ArchivalObject.resource_lang  # need to get this from get_resource_info()
+        self.language = ArchivalObject.resource_lang
         """str: Language of material of the resource, usually eng"""
         self.citation = ArchivalObject.resource_citation
         """str: Preferred citation of the resource"""
-        self.subject_personal = ArchivalObject.resource_subpers  # need to get this from get_resource_info()
+        self.subject_personal = ArchivalObject.resource_subpers
         """str: Subject person of the resource, multiple separated by ||"""
         self.resource = ""
         """str: Resource record URI of the parent resource of the archival object"""
@@ -338,7 +346,7 @@ class ArchivalObject:
         ArchivalObject.resource_uri = resource_info["uri"]
 
         # Get Language of Materials
-        ArchivalObject.resource_lang = resource_info["lang_materials"][0]["language_and_script"]["language"]
+        ArchivalObject.resource_lang = self.language = resource_info["lang_materials"][0]["language_and_script"]["language"]
 
         for key, value in resource_info.items():
             # Get Preferred Citation note
@@ -347,8 +355,8 @@ class ArchivalObject:
                     if "type" in note:
                         if note["type"] == "prefercite":
                             for subnote in note["subnotes"]:
-                                ArchivalObject.resource_citation = subnote["content"]
-            # Get Creator
+                                ArchivalObject.resource_citation = self.citation = subnote["content"]
+            # Get Creator, Subject Person
             if "linked_agents" == key:
                 creators = ""
                 personals = ""
@@ -366,8 +374,8 @@ class ArchivalObject:
                                     personals += person_json["title"].rstrip(".") + "||"
                                 else:
                                     personals += person_json["title"] + "||"
-                ArchivalObject.resource_creator = creators[:-2]
-                ArchivalObject.resource_subpers = personals[:-2]
+                ArchivalObject.resource_creator = self.creator = creators[:-2]
+                ArchivalObject.resource_subpers = self.subject_personal = personals[:-2]
             # Get Subjects
             if "subjects" == key:
                 subjects = ""
@@ -376,8 +384,8 @@ class ArchivalObject:
                 for subject in resource_info["subjects"]:
                     subject_ref = subject["ref"]
                     subject_json = asp_client.get(subject_ref, params={"resolve[]": True}).json()
-                    for key, value in subject_json.items():
-                        if key == "terms":
+                    for subject_field, subject_value in subject_json.items():
+                        if subject_field == "terms":
                             if "term_type" in subject_json["terms"][0]:
                                 if subject_json["terms"][0]["term_type"] == "genre_form":
                                     if "." in subject_json["title"]:
@@ -394,7 +402,7 @@ class ArchivalObject:
                                         spatials += subject_json["title"].rstrip(".") + "||"
                                     else:
                                         spatials += subject_json["title"] + "||"
-                ArchivalObject.resource_subj = subjects[:-2]
-                ArchivalObject.resource_subjspatial = spatials[:-2]
-                ArchivalObject.resource_subjmed = mediums[:-2]
+                ArchivalObject.resource_subj = self.subject = subjects[:-2]
+                ArchivalObject.resource_subjspatial = self.subject_spatial = spatials[:-2]
+                ArchivalObject.resource_subjmed = self.subject_medium = mediums[:-2]
 

@@ -329,10 +329,10 @@ class ResourceObject:
         """
         resource_info = asp_client.get(resource_uri).json()
 
-        json_object = json.dumps(resource_info, indent=4)  # Getting proper json data from resource for testing
-        # Writing to test_data/archival_object.json
-        with open("test_data/resource.json", "w") as outfile:
-            outfile.write(json_object)
+        # json_object = json.dumps(resource_info, indent=4)  # Getting proper json data from resource for testing
+        # # Writing to test_data/archival_object.json
+        # with open("test_data/resource.json", "w") as outfile:
+        #     outfile.write(json_object)
 
         # Set resource_uri
         self.uri = resource_info["uri"]

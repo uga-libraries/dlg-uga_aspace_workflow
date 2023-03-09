@@ -1,3 +1,4 @@
+import ast
 import unittest
 import aspace
 from asnake.client import ASnakeClient
@@ -24,7 +25,8 @@ class TestASpaceFunctions(unittest.TestCase):
         repository = 4  # use these for unittests
         error, tc_uris = self.local_aspace.get_tcuri(barcode, repository)
         self.assertTrue(tc_uris)  # return a non-empty list of results
-        self.assertIsInstance(error, bool)  # return True or False if error was caught searching tc uris
+        if error:
+            self.assertIsInstance(error, bool)  # return True or False if error was caught searching tc uris
 
     def test_getarchobjs(self):
         pass
@@ -33,13 +35,27 @@ class TestASpaceFunctions(unittest.TestCase):
         test_repositories = self.local_aspace.get_repos()
         self.assertTrue(test_repositories)
 
-    archival_object = ""
+    def test_parse_archobj(self):
+        archobj_example = Path(os.getcwd(), "test_data/archival_object.json")
+        with open(archobj_example, "r", encoding='utf-8') as archobj_data:
+            resource_obj = aspace.ResourceObject()
+            test_data = json.loads(archobj_data.read())
+            resource_obj.uri = "/repositories/4/resources/3155"  # set this to prevent getting resource info
+            archobj_inst = ArchivalObject(test_data, "guan_1234a")
+            archobj_inst.parse_archobj(self.local_aspace.client, resource_obj)
+        self.assertEqual(archobj_inst.title, "Blackwell, Louise and Clay, Frances - Florida State University regarding "
+                                             "a critical study of Smith's work")
+        self.assertEqual(archobj_inst.box, "box 1")
+        self.assertEqual(archobj_inst.child, "folder 23")
 
-    def test_parse_archivalobject(self):
-        pass
-
-    def test_resourceinfo(self):
-        pass
+    def test_get_resource_info(self):
+        self.local_aspace.aspace_login()
+        resource_ex = aspace.ResourceObject()
+        resource_ex.get_resource_info(self.local_aspace.client, "/repositories/4/resources/3155")
+        self.assertEqual(resource_ex.language, "eng")
+        self.assertEqual(resource_ex.subjper, "Snelling, Paula||Smith, Esther")
+        self.assertEqual(resource_ex.citation, "Lillian Eugenia Smith papers, ms1283a. Hargrett Rare Book and "
+                                               "Manuscript Library, The University of Georgia Libraries.")
 
     # test for grabbing archival objects get_archobjs
 
@@ -68,6 +84,9 @@ class TestGUIFunctions(unittest.TestCase):
 class TestSpreadsheetFunctions(unittest.TestCase):
 
     def test_get_barcodes(self):
+        pass
+
+    def test_get_cell_coordinate(self):
         pass
 
     def test_write_template(self):

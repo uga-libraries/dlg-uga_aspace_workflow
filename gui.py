@@ -14,6 +14,7 @@ from loguru import logger
 from pathlib import Path
 
 WRITE_AOS_THREAD = "-WAOS_THREAD-"
+GET_AOS_THREAD = "-GAOS_THREAD-"  # would have to figure out how to return linked_objects, archobjs_error in thread
 
 logger.remove()
 logger.add(str(Path('logs', 'log_{time:YYYY-MM-DD}.log')),
@@ -69,9 +70,29 @@ def run_gui():
                 psg.Popup("WARNING!\nPlease select a repository")
                 logger.warning("User did not select a repository")
             else:
-                args = (defaults, main_values, aspace_instance, repositories, main_window)
-                start_thread(write_aos, args, main_window)
-                logger.info("WRITE_AOS_THREAD started")
+                defaults["_AS-DLG_FILE_"] = main_values["_AS-DLG_FILE_"]
+                ss_inst = spreadsheet.Spreadsheet
+                barcodes = ss_inst.get_barcodes(main_values['_TC_FILE_'])
+                row_num = 2  # 2 because 1 is header row
+                for barcode in barcodes:
+                    # uri_error, tc_uri = aspace_instance.get_tcuri(barcode, repositories[main_values["_REPO_SELECT_"]])
+                    #
+                    # if uri_error is True:
+                    #     for message in tc_uri:
+                    #         print(message)
+                    # else:
+                    linked_objects, archobjs_error = aspace_instance.get_archobjs(barcode,
+                                                                                  repositories[
+                                                                                      main_values["_REPO_SELECT_"]],
+                                                                                  main_window)
+                    if archobjs_error:
+                        print(archobjs_error)
+                    else:
+                        resource_links, selections, cancel = parse_linked_objs(linked_objects, aspace_instance)
+                        args = (resource_links, selections, cancel, main_values, aspace_instance, linked_objects,
+                                row_num, ss_inst, main_window)
+                        start_thread(write_aos, args, main_window)
+                        logger.info("WRITE_AOS_THREAD started")
         if main_event in (WRITE_AOS_THREAD):
             main_window[f'{"_WRITE_AOS_"}'].update(disabled=False)
             main_window[f'{"_OPEN_AS-DLG_"}'].update(disabled=False)
@@ -136,64 +157,54 @@ def get_aspace_login(defaults):
         return close_program, aspace_instance, repositories
 
 
-def write_aos(defaults, main_values, aspace_instance, repositories, gui_window):
+def write_aos(resource_links, selections, cancel, main_values, aspace_instance, linked_objects, row_num, ss_inst,
+              gui_window):
     """
     Parses provided spreadsheet for barcodes, searches them in ASpace, parses returned archival objects, and writes to
     user provided spreadsheet template
 
-    :param dict defaults: PySimpleGUI default defaults dict for user defaults. Did I say default enough?
+    :param dict resource_links: key = resource ID, value = list of linked archival objects for that resource
+    :param list selections: list containing one resource selected by the user to add archival objects to the spreadsheet
+    :param bool cancel: cancel the selection window if user exits out of selection popup
     :param main_values: PySimpleGUI main window values
     :param aspace_instance: Instance of the ASpace class, used for making requests to the API
-    :param dict repositories: All the repositories and their IDs in an ASpace instance
+    :param list linked_objects: list of all archival objects associated with the top container
+    :param int row_num: row counter - keeps track of which row to write to
+    :param ss_inst: openpyxl Sheet instance of the current sheet a user is writing to
     :param gui_window: PySimpleGUI's window class instance, used for tracking threads
     """
-    defaults["_AS-DLG_FILE_"] = main_values["_AS-DLG_FILE_"]
-    ss_inst = spreadsheet.Spreadsheet
-    barcodes = ss_inst.get_barcodes(main_values['_TC_FILE_'])
-    row_num = 2  # 2 because 1 is header row
-    for barcode in barcodes:
-        # uri_error, tc_uri = aspace_instance.get_tcuri(barcode, repositories[main_values["_REPO_SELECT_"]])
-        #
-        # if uri_error is True:
-        #     for message in tc_uri:
-        #         print(message)
-        # else:
-        linked_objects, archobjs_error = aspace_instance.get_archobjs(barcode,
-                                                                      repositories[main_values["_REPO_SELECT_"]])
-        if archobjs_error:
-            print(archobjs_error)
+    if cancel is not True:
+        if selections:
+            for resource in selections:
+                if resource in resource_links:
+                    if collid_regex.findall(resource):
+                        collnum = collid_regex.findall(resource)[0]
+                    else:
+                        collnum = resource
+                    dlg_id = f'guan_{collnum}'
+                    resource_obj = aspace.ResourceObject()
+                    for linked_object in resource_links[resource]:
+                        arch_obj = aspace.ArchivalObject(linked_object, dlg_id)
+                        resource_obj = arch_obj.parse_archobj(aspace_instance.client, resource_obj)
+                        ss_inst.write_template(main_values["_AS-DLG_FILE_"], arch_obj, resource_obj, row_num,
+                                               main_values["_REPO_SELECT_"])
+                        row_num += 1
+                        print(f'{arch_obj.record_id} added\n')
         else:
-            resource_links, selections, cancel = parse_linked_objs(linked_objects, aspace_instance)
-            if cancel is not True:
-                if selections:
-                    for resource in selections:
-                        if resource in resource_links:
-                            if collid_regex.findall(resource):
-                                collnum = collid_regex.findall(resource)[0]
-                            else:
-                                collnum = resource
-                            dlg_id = f'guan_{collnum}'
-                            for linked_object in resource_links[resource]:
-                                arch_obj = aspace.ArchivalObject(linked_object, dlg_id)
-                                arch_obj.parse_archobj(aspace_instance.client)
-                                # arch_obj.get_resource_info(aspace_instance.client)
-                                ss_inst.write_template(main_values["_AS-DLG_FILE_"], arch_obj, row_num)
-                                row_num += 1
-                                print(f'{arch_obj.record_id} added\n')
+            for res_id, linked_object in resource_links.items():
+                if collid_regex.findall(res_id):
+                    collnum = collid_regex.findall(res_id)[0]
                 else:
-                    for res_id, linked_object in resource_links.items():
-                        if collid_regex.findall(res_id):
-                            collnum = collid_regex.findall(res_id)[0]
-                        else:
-                            collnum = res_id
-                        dlg_id = f'guan_{collnum}'
-                        for linked_object in linked_objects:
-                            arch_obj = aspace.ArchivalObject(linked_object, dlg_id)
-                            arch_obj.parse_archobj(aspace_instance.client)
-                            # arch_obj.get_resource_info(aspace_instance.client)
-                            ss_inst.write_template(main_values["_AS-DLG_FILE_"], arch_obj, row_num)
-                            row_num += 1
-                            print(f'{arch_obj.record_id} added\n')
+                    collnum = res_id
+                dlg_id = f'guan_{collnum}'
+                resource_obj = aspace.ResourceObject()
+                for linked_object in linked_objects:
+                    arch_obj = aspace.ArchivalObject(linked_object, dlg_id)
+                    resource_obj = arch_obj.parse_archobj(aspace_instance.client, resource_obj)
+                    ss_inst.write_template(main_values["_AS-DLG_FILE_"], arch_obj, resource_obj, row_num,
+                                           main_values["_REPO_SELECT_"])
+                    row_num += 1
+                    print(f'{arch_obj.record_id} added\n')
     trailing_line = 76 - len(f'Finished {str(row_num-2)} exports') - (len(str(row_num-2)) - 1)
     print("\n" + "-" * 55 + "Finished {} exports".format(str(row_num-2)) + "-" * trailing_line + "\n")
     gui_window.write_event_value('-WAOS_THREAD-', (threading.current_thread().name,))

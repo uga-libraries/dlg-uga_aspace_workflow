@@ -5,7 +5,7 @@ import re
 import urllib.parse
 import asnake.logging as logging
 
-from gui import logger
+from gui import logger, threading
 from asnake.client import ASnakeClient
 from asnake.client.web_client import ASnakeAuthError
 
@@ -113,64 +113,33 @@ class ASpace:
             tc_uri.insert(0, f'No results found for: {barcode}')
         return uri_error, tc_uri
 
-    # 4th step - get archival objects associated with top containers - use collection ref (URI) to narrow searching for archival objects within collection
-    # use https://archivesspace.github.io/archivesspace/api/?shell#fetch-tree-information-for-the-top-level-resource-record - go through each archival object?
+    # 4th step - get archival objects associated with top containers - use collection ref (URI) to narrow searching for
+    # archival objects within collection. Use
+    # https://archivesspace.github.io/archivesspace/api/?shell#fetch-tree-information-for-the-top-level-resource-record
+    # - go through each archival object?
 
-    def get_archobjs(self, barcode, repository):
+    def get_archobjs(self, barcode, repository, gui_window):
         """
         Gets the archival objects associated with a top container
 
-        :param list tc_uri: list of the top container URI
+        :param int barcode: barcode of the top container to search for
+        :param int repository: ArchivesSpace repository ID number
 
         :return list ao_results: list of all archival objects associated with the top container
         :return str archobjs_error: error message of search if occurred, empty string otherwise
         """
-        # barcode = 32108050893687  # use these for unittests
-        # repository = 4  # use these for unittests
-        # ao_results = None
         archobjs_error = ""
-        search_aos = self.client.get_paged(f'repositories/{repository}/search', params={'q': f'{barcode}', 'type': ['archival_object']})
-        # print(type(search_aos), search_aos)
-        # Above for testing purposes only, unless we have to use instead of filter_term query
+        search_aos = self.client.get_paged(f'repositories/{repository}/search', params={'q': f'{barcode}',
+                                                                                        'type': ['archival_object']})
         ao_results = [result for result in search_aos]
         if "error" in search_aos:
             print(f'Error when searching for barcode: {search_aos}')
             archobjs_error = "Error when searching for barcode: {search_aos}"
-        # print(len(ao_results))
-        # print(f'Length: {len(ao_results[0])}\n{ao_results[0]["id"]}\n\n')  # This seems to grab all 27 associated archival objects
-
-
-        # for top_cont in tc_uri:
-        #     # print(tc_uri)  # /repositories/4/top_containers/45245
-        #     # encoded_uri = urllib.parse.quote(tc_uri, 'UTF-8')  # tried utf8
-        #     # print(encoded_uri)  # %2Frepositories%2F4%2Ftop_containers%2F45245
-        #     search_aos = self.client.get_paged(f'repositories/4/search',
-        #                                        params={'filter_query[]': f'top_container_uri_u_sstr:{top_cont}',
-        #                                                'type': ['archival_object']})
-        #     print(search_aos)
-        #     ao_results = [result for result in search_aos]
-        #     print(len(ao_results))  # 322873 - it's grabbing all archival objects, filter_query returns 0
+        gui_window.write_event_value('-GAOS_THREAD-', (threading.current_thread().name,))
         return ao_results, archobjs_error
 
 
 class ArchivalObject:
-
-    resource_uri = ""
-    """str: ArchivesSpace URI for the parent resource"""    # TODO: Split this info into another class "ResourceObject" with these class variable as instance variables
-    resource_lang = ""
-    """str: Language of materials for the parent resource record"""
-    resource_citation = ""
-    """str: Preferred citation note for the parent resource record"""
-    resource_creator = ""
-    """str: Agent with type Creator for the parent resource record"""
-    resource_subpers = ""
-    """str: Agent with type Subject for the parent resource record"""
-    resource_subj = ""
-    """str: Subject with type topical for the parent resource record"""
-    resource_subjmed = ""
-    """str: Subject with type genre_form for the parent resource record"""
-    resource_subjspatial = ""
-    """str: Subject with type geographic for the parent resource record"""
 
     def __init__(self, archival_object, dlg_id):
         """
@@ -187,26 +156,14 @@ class ArchivalObject:
         """str: ArchivesSpace URI for the archival object"""
         self.title = ""
         """str: Title of the archival object"""
-        self.creator = ArchivalObject.resource_creator
-        """str: Creator(s) of the collection, multiple separated by ||"""
-        self.subject = ArchivalObject.resource_subj
-        """str: Subject terms for resource, multiple separated by ||"""
         self.description = ""
         """str: Description of the archival object, found in scope and content note"""
         self.date = ""
         """str: Date of the archival object, formatted YYYY-MM-DD, YYYY-MM, YYYY or YYYY/YYYY"""
-        self.subject_spatial = ArchivalObject.resource_subjspatial
-        """str: Subjects geographic/spatial of the resource, multiple separated by ||"""
-        self.subject_medium = ArchivalObject.resource_subjmed
-        """str: Subjects medium/genre/format of the resource, multiple separated by ||"""
         self.extent = ""
         """str: Extent note of the archival object, if available"""
-        self.language = ArchivalObject.resource_lang
-        """str: Language of material of the resource, usually eng"""
-        self.citation = ArchivalObject.resource_citation
-        """str: Preferred citation of the resource"""
-        self.subject_personal = ArchivalObject.resource_subpers
-        """str: Subject person of the resource, multiple separated by ||"""
+        self.citation = ""
+        """str: Preferred citation of the resource, if archival object does not have a citation"""
         self.resource = ""
         """str: Resource record URI of the parent resource of the archival object"""
         self.box = ""
@@ -218,7 +175,7 @@ class ArchivalObject:
         self.record_id = ""
         """str: Combined dlg_id with box #, folder #, and item # when available"""
 
-    def parse_archobj(self, asp_client):
+    def parse_archobj(self, asp_client, resource_obj):
         """
         Parses an archival object json record to assign instance variables
 
@@ -227,6 +184,12 @@ class ArchivalObject:
         box_indicator = ""
         child_indicator = ""
         grandchild_indicator = ""
+
+        # json_object = json.dumps(self.arch_obj, indent=4)  # Getting proper json data from archival object for testing
+        # # Writing to test_data/archival_object.json
+        # with open("test_data/archival_object.json", "w") as outfile:
+        #     outfile.write(json_object)
+
         json_info = json.loads(self.arch_obj["json"])
 
         # Get title
@@ -296,14 +259,14 @@ class ArchivalObject:
                                     if self.grandchild:
                                         self.grandchild += f' {grandchild_indicator}'
                             elif type_match:
-                                type_indicator = instance["sub_container"][type_match.string]
                                 if type_match.string[-1] == "2":
                                     self.child += sc_value + f' {child_indicator}'
                                 if type_match.string[-1] == "3":
                                     self.grandchild += sc_value + f' {grandchild_indicator}'
                             elif sc_field == "top_container":
                                 tc_type = ""
-                                for tc_field, tc_value in instance["sub_container"]["top_container"]["_resolved"].items():
+                                for tc_field, tc_value in \
+                                        instance["sub_container"]["top_container"]["_resolved"].items():
                                     if tc_field == "type":
                                         tc_type = tc_value
                                     elif tc_field == "indicator":
@@ -312,8 +275,8 @@ class ArchivalObject:
             # Get resource URI
             if key == "resource":
                 self.resource = json_info["resource"]["ref"]
-                if json_info["resource"]["ref"] != ArchivalObject.resource_uri:
-                    ArchivalObject.get_resource_info(self, asp_client)
+                if self.resource != resource_obj.uri:
+                    resource_obj.get_resource_info(asp_client, self.resource)
             # Get archival object URI
             if key == "uri":
                 self.arch_obj_uri = json_info["uri"]
@@ -324,29 +287,62 @@ class ArchivalObject:
             if indicator:
                 try:
                     int_indicator = int(indicator)
-                except:
+                except Exception:
                     logger.info(f'TypeError with: {self.arch_obj_uri}\n{indicators}')
                     record_id_composite += f'{indicator}?-'
                 else:
                     record_id_composite += f'{int_indicator:03}-'
                 finally:
                     self.record_id = record_id_composite[:-1]
+        return resource_obj
 
-    def get_resource_info(self, asp_client):
+
+class ResourceObject:
+
+    def __init__(self):
+        """Resource record from ASpace with specific fields for entry into DLG workflow"""
+        self.uri = ""
+        """str: ArchivesSpace URI for the parent resource"""
+        self.language = ""
+        """str: Language of materials for the parent resource record"""
+        self.citation = ""
+        """str: Preferred citation note for the parent resource record"""
+        self.creator = ""
+        """str: Agent with type Creator for the parent resource record"""
+        self.subjper = ""
+        """str: Agent with type Subject for the parent resource record"""
+        self.subject = ""
+        """str: Subject with type topical for the parent resource record"""
+        self.subjmed = ""
+        """str: Subject with type genre_form for the parent resource record"""
+        self.subjspa = ""
+        """str: Subject with type geographic for the parent resource record"""
+
+    def get_resource_info(self, asp_client, resource_uri):
         """
         Intakes an ASpace client and gets the resource info for an archival object and assigns instance variables
 
         :param asp_client: ArchivesSnake client as created through ASnakeClient
+        :param str resource_uri: ArchivesSpace URI for the parent resource
 
         :return None:
         """
-        resource_info = asp_client.get(self.resource).json()
+        resource_info = asp_client.get(resource_uri).json()
+
+        json_object = json.dumps(resource_info, indent=4)  # Getting proper json data from resource for testing
+        # Writing to test_data/archival_object.json
+        with open("test_data/resource.json", "w") as outfile:
+            outfile.write(json_object)
 
         # Set resource_uri
-        ArchivalObject.resource_uri = resource_info["uri"]
+        self.uri = resource_info["uri"]
 
         # Get Language of Materials
-        ArchivalObject.resource_lang = self.language = resource_info["lang_materials"][0]["language_and_script"]["language"]
+        combined_lang = ""
+        for language in resource_info["lang_materials"]:
+            if "language_and_script" in language:
+                combined_lang += f'{language["language_and_script"]["language"]}||'
+        self.language = combined_lang[:-2]
 
         for key, value in resource_info.items():
             # Get Preferred Citation note
@@ -355,7 +351,7 @@ class ArchivalObject:
                     if "type" in note:
                         if note["type"] == "prefercite":
                             for subnote in note["subnotes"]:
-                                ArchivalObject.resource_citation = self.citation = subnote["content"]
+                                self.citation = subnote["content"]
             # Get Creator, Subject Person
             if "linked_agents" == key:
                 creators = ""
@@ -374,8 +370,8 @@ class ArchivalObject:
                                     personals += person_json["title"].rstrip(".") + "||"
                                 else:
                                     personals += person_json["title"] + "||"
-                ArchivalObject.resource_creator = self.creator = creators[:-2]
-                ArchivalObject.resource_subpers = self.subject_personal = personals[:-2]
+                self.creator = creators[:-2]
+                self.subjper = personals[:-2]
             # Get Subjects
             if "subjects" == key:
                 subjects = ""
@@ -402,7 +398,6 @@ class ArchivalObject:
                                         spatials += subject_json["title"].rstrip(".") + "||"
                                     else:
                                         spatials += subject_json["title"] + "||"
-                ArchivalObject.resource_subj = self.subject = subjects[:-2]
-                ArchivalObject.resource_subjspatial = self.subject_spatial = spatials[:-2]
-                ArchivalObject.resource_subjmed = self.subject_medium = mediums[:-2]
-
+                self.subject = subjects[:-2]
+                self.subjspa = spatials[:-2]
+                self.subjmed = mediums[:-2]

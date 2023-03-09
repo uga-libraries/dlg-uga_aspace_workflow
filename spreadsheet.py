@@ -49,13 +49,14 @@ class Spreadsheet:
         return cell_coordinate
 
     @staticmethod
-    def write_template(aspace_dlg_template, arch_obj, row_number):
+    def write_template(aspace_dlg_template, arch_obj, resource_obj, row_number, repository):
         """
         Intakes the aspace_dlg spreadsheet and writes data from archival object instance row by row
 
         :param str aspace_dlg_template: file location for the user input spreadsheet to write to
         :param ArchivalObject arch_obj: instance of ArchivalObject class containing data to be written to spreadsheet
         :param int row_number: running count of the row number to add data to
+        :param str repository: The repository title to fill out in holding institution column
 
         """
         data_columns = {}
@@ -101,25 +102,28 @@ class Spreadsheet:
                 elif "dcterms_title" == column:
                     sheet[Spreadsheet.get_cell_coordinate(coordinate, row_number)] = arch_obj.title
                 elif "dcterms_creator" == column:
-                    sheet[Spreadsheet.get_cell_coordinate(coordinate, row_number)] = arch_obj.creator
+                    sheet[Spreadsheet.get_cell_coordinate(coordinate, row_number)] = resource_obj.creator
                 elif "dcterms_subject" == column:
-                    sheet[Spreadsheet.get_cell_coordinate(coordinate, row_number)] = arch_obj.subject
+                    sheet[Spreadsheet.get_cell_coordinate(coordinate, row_number)] = resource_obj.subject
                 elif "dcterms_description" == column:
                     sheet[Spreadsheet.get_cell_coordinate(coordinate, row_number)] = arch_obj.description
                 elif "dc_date" == column:
                     sheet[Spreadsheet.get_cell_coordinate(coordinate, row_number)] = arch_obj.date
                 elif "dcterms_spatial" == column:
-                    sheet[Spreadsheet.get_cell_coordinate(coordinate, row_number)] = arch_obj.subject_spatial
+                    sheet[Spreadsheet.get_cell_coordinate(coordinate, row_number)] = resource_obj.subjspa
                 elif "dcterms_medium" == column:
-                    sheet[Spreadsheet.get_cell_coordinate(coordinate, row_number)] = arch_obj.subject_medium
+                    sheet[Spreadsheet.get_cell_coordinate(coordinate, row_number)] = resource_obj.subjmed
                 elif "extent" == column:
                     sheet[Spreadsheet.get_cell_coordinate(coordinate, row_number)] = arch_obj.extent
                 elif "dcterms_language" == column:
-                    sheet[Spreadsheet.get_cell_coordinate(coordinate, row_number)] = arch_obj.language
+                    sheet[Spreadsheet.get_cell_coordinate(coordinate, row_number)] = resource_obj.language
                 elif "dcterms_bibliographic_citation" == column:
-                    sheet[Spreadsheet.get_cell_coordinate(coordinate, row_number)] = arch_obj.citation
+                    if not arch_obj.citation:
+                        sheet[Spreadsheet.get_cell_coordinate(coordinate, row_number)] = resource_obj.citation
+                    else:
+                        sheet[Spreadsheet.get_cell_coordinate(coordinate, row_number)] = arch_obj.citation
                 elif "dlg_subject_personal" == column:
-                    sheet[Spreadsheet.get_cell_coordinate(coordinate, row_number)] = arch_obj.subject_personal
+                    sheet[Spreadsheet.get_cell_coordinate(coordinate, row_number)] = resource_obj.subjper
                 elif "holding institution" == column:
                     sheet[Spreadsheet.get_cell_coordinate(coordinate, row_number)] = "Hargrett Library"
                 elif "public" == column:

@@ -83,8 +83,7 @@ def run_gui():
                     # else:
                     linked_objects, archobjs_error = aspace_instance.get_archobjs(barcode,
                                                                                   repositories[
-                                                                                      main_values["_REPO_SELECT_"]],
-                                                                                  main_window)
+                                                                                      main_values["_REPO_SELECT_"]])
                     if archobjs_error:
                         print(archobjs_error)
                     else:

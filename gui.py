@@ -70,28 +70,45 @@ def run_gui():
                 psg.Popup("WARNING!\nPlease select a repository")
                 logger.warning("User did not select a repository")
             else:
-                defaults["_AS-DLG_FILE_"] = main_values["_AS-DLG_FILE_"]
-                ss_inst = spreadsheet.Spreadsheet
-                barcodes = ss_inst.get_barcodes(main_values['_TC_FILE_'])
-                row_num = 2  # 2 because 1 is header row
-                for barcode in barcodes:
-                    # uri_error, tc_uri = aspace_instance.get_tcuri(barcode, repositories[main_values["_REPO_SELECT_"]])
-                    #
-                    # if uri_error is True:
-                    #     for message in tc_uri:
-                    #         print(message)
-                    # else:
-                    linked_objects, archobjs_error = aspace_instance.get_archobjs(barcode,
-                                                                                  repositories[
-                                                                                      main_values["_REPO_SELECT_"]])
-                    if archobjs_error:
-                        print(archobjs_error)
+                if os.path.exists(main_values["_AS-DLG_FILE_"]) is not True:
+                    psg.Popup("WARNING!\nThe file you selected for the ASpace>DLG Template does not exist."
+                              "\nTry selecting another file")
+                    logger.error(f'ASpace>DLG Template error: User selected file that does not exist\n'
+                                 f'{main_values["_AS-DLG_FILE_"]}')
+                elif os.path.exists(main_values["_TC_FILE_"]) is not True:
+                    psg.Popup("WARNING!\nThe file you selected for the Top Container file does not exist."
+                              "\nTry selecting another file")
+                    logger.error(f'Top Container file error: User selected file that does not exist\n'
+                                 f'{main_values["_TC_FILE_"]}')
+                else:
+                    defaults["_AS-DLG_FILE_"] = main_values["_AS-DLG_FILE_"]
+                    ss_inst = spreadsheet.Spreadsheet
+                    barcodes, bar_error = ss_inst.get_barcodes(main_values['_TC_FILE_'])
+                    if bar_error:
+                        logger.error(f'get_barcodes ERROR: No barcodes found\n{bar_error}')
+                        print(f'get_barcodes ERROR: No barcodes found\n{bar_error}')
                     else:
-                        resource_links, selections, cancel = parse_linked_objs(linked_objects, aspace_instance)
-                        args = (resource_links, selections, cancel, main_values, aspace_instance, linked_objects,
-                                row_num, ss_inst, main_window)
-                        start_thread(write_aos, args, main_window)
-                        logger.info("WRITE_AOS_THREAD started")
+                        row_num = 2  # 2 because 1 is header row
+                        for barcode in barcodes:
+                            # uri_error, tc_uri = aspace_instance.get_tcuri(barcode,
+                            #                                               repositories[main_values["_REPO_SELECT_"]])
+                            #
+                            # if uri_error is True:
+                            #     for message in tc_uri:
+                            #         print(message)
+                            # else:
+                            linked_objects, archobjs_error = aspace_instance.get_archobjs(barcode,
+                                                                                          repositories[
+                                                                                              main_values["_REPO_SELECT_"]])
+                            if archobjs_error:
+                                logger.error(f'get_archobjs ERROR: {archobjs_error}')
+                                print(archobjs_error)
+                            else:
+                                resource_links, selections, cancel = parse_linked_objs(linked_objects, aspace_instance)
+                                args = (resource_links, selections, cancel, main_values, aspace_instance, linked_objects,
+                                        row_num, ss_inst, main_window)
+                                start_thread(write_aos, args, main_window)
+                                logger.info("WRITE_AOS_THREAD started")
         if main_event in (WRITE_AOS_THREAD):
             main_window[f'{"_WRITE_AOS_"}'].update(disabled=False)
             main_window[f'{"_OPEN_AS-DLG_"}'].update(disabled=False)
@@ -176,34 +193,13 @@ def write_aos(resource_links, selections, cancel, main_values, aspace_instance, 
         if selections:
             for resource in selections:
                 if resource in resource_links:
-                    if collid_regex.findall(resource):
-                        collnum = collid_regex.findall(resource)[0]
-                    else:
-                        collnum = resource
-                    dlg_id = f'guan_{collnum}'
-                    resource_obj = aspace.ResourceObject()
-                    for linked_object in resource_links[resource]:
-                        arch_obj = aspace.ArchivalObject(linked_object, dlg_id)
-                        resource_obj = arch_obj.parse_archobj(aspace_instance.client, resource_obj)
-                        ss_inst.write_template(main_values["_AS-DLG_FILE_"], arch_obj, resource_obj, row_num,
-                                               main_values["_REPO_SELECT_"])
-                        row_num += 1
-                        print(f'{arch_obj.record_id} added\n')
+                    get_archres(resource, ss_inst, row_num, aspace_instance, main_values, resource_links[resource])
         else:
             for res_id, linked_object in resource_links.items():
-                if collid_regex.findall(res_id):
-                    collnum = collid_regex.findall(res_id)[0]
-                else:
-                    collnum = res_id
-                dlg_id = f'guan_{collnum}'
-                resource_obj = aspace.ResourceObject()
-                for linked_object in linked_objects:
-                    arch_obj = aspace.ArchivalObject(linked_object, dlg_id)
-                    resource_obj = arch_obj.parse_archobj(aspace_instance.client, resource_obj)
-                    ss_inst.write_template(main_values["_AS-DLG_FILE_"], arch_obj, resource_obj, row_num,
-                                           main_values["_REPO_SELECT_"])
-                    row_num += 1
-                    print(f'{arch_obj.record_id} added\n')
+                get_archres(res_id, ss_inst, row_num, aspace_instance, main_values, linked_objects)
+    else:
+        logger.info(f'User cancelled resource selection {resource_links.keys()}')
+    logger.info(f'Finished {str(row_num-2)} exports')
     trailing_line = 76 - len(f'Finished {str(row_num-2)} exports') - (len(str(row_num-2)) - 1)
     print("\n" + "-" * 55 + "Finished {} exports".format(str(row_num-2)) + "-" * trailing_line + "\n")
     gui_window.write_event_value('-WAOS_THREAD-', (threading.current_thread().name,))
@@ -274,6 +270,23 @@ def select_resource(resource_ids):
             multres_window.close()
             break
     return selections, cancel
+
+
+def get_archres(res_id, ss_inst, row_num, aspace_instance, main_values, linked_objects):
+    if collid_regex.findall(res_id):
+        collnum = collid_regex.findall(res_id)[0]
+    else:
+        collnum = res_id
+    dlg_id = f'guan_{collnum}'
+    resource_obj = aspace.ResourceObject()
+    for linked_object in linked_objects:
+        arch_obj = aspace.ArchivalObject(linked_object, dlg_id)
+        resource_obj = arch_obj.parse_archobj(aspace_instance.client, resource_obj)
+        ss_inst.write_template(main_values["_AS-DLG_FILE_"], arch_obj, resource_obj, row_num,
+                               main_values["_REPO_SELECT_"])
+        row_num += 1
+        logger.info(f'{arch_obj.record_id} added\n')
+        print(f'{arch_obj.record_id} added\n')
 
 
 def open_file(filepath):

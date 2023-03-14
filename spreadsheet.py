@@ -17,8 +17,10 @@ class Spreadsheet:
         :param tc_spreadsheet: spreadsheet object of top containers for retrieving barcodes
 
         :return list barcodes: list of barcodes (str) for top containers
+        :return str error: error message if occurred, empty string otherwise
         """
         barcodes = []
+        error = ''
         with open(tc_spreadsheet, newline='') as csvfile:
             test_reader = csv.reader(csvfile)
             column_num = 0
@@ -27,12 +29,15 @@ class Spreadsheet:
                 for value in row:
                     if value == "barcode_u_sstr":
                         barcode_col = column_num
-                        pass
                     else:
                         column_num += 1
-                barcodes.append(row[barcode_col])
-            barcodes.pop(0)
-        return barcodes
+                if barcode_col is not None:
+                    barcodes.append(row[barcode_col])
+            if barcodes:
+                barcodes.pop(0)
+            else:
+                error = "barcode_u_sstr not found in header"
+        return barcodes, error
 
     @staticmethod
     def get_cell_coordinate(coordinate, row_number):

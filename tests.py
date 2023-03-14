@@ -1,4 +1,3 @@
-import ast
 import unittest
 import aspace
 from asnake.client import ASnakeClient
@@ -23,6 +22,7 @@ class TestASpaceFunctions(unittest.TestCase):
     def test_grab_tcuri(self):
         barcode = 32108050893687  # use these for unittests
         repository = 4  # use these for unittests
+        self.local_aspace.aspace_login()
         error, tc_uris = self.local_aspace.get_tcuri(barcode, repository)
         self.assertTrue(tc_uris)  # return a non-empty list of results
         if error:

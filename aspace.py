@@ -118,7 +118,7 @@ class ASpace:
     # https://archivesspace.github.io/archivesspace/api/?shell#fetch-tree-information-for-the-top-level-resource-record
     # - go through each archival object?
 
-    def get_archobjs(self, barcode, repository, gui_window):
+    def get_archobjs(self, barcode, repository):
         """
         Gets the archival objects associated with a top container
 
@@ -135,7 +135,6 @@ class ASpace:
         if "error" in search_aos:
             print(f'Error when searching for barcode: {search_aos}')
             archobjs_error = "Error when searching for barcode: {search_aos}"
-        gui_window.write_event_value('-GAOS_THREAD-', (threading.current_thread().name,))
         return ao_results, archobjs_error
 
 

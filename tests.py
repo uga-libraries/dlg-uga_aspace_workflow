@@ -1,3 +1,4 @@
+import os
 import unittest
 import aspace
 from asnake.client import ASnakeClient
@@ -5,6 +6,7 @@ from asnake.client import ASnakeClient
 import gui
 from aspace import *
 from gui import *
+from spreadsheet import *
 from secrets import *
 
 
@@ -29,6 +31,12 @@ class TestASpaceFunctions(unittest.TestCase):
             self.assertIsInstance(error, bool)  # return True or False if error was caught searching tc uris
 
     def test_getarchobjs(self):
+        barcode = 32108050893687  # use these for unittests
+        repository = 4  # use these for unittests
+        results, error = self.local_aspace.get_archobjs(barcode, repository)
+        self.assertTrue(results)  # return a non-empty list of results
+        if error:
+            self.assertIsInstance(error, bool)
         pass
 
     def test_get_repos(self):
@@ -84,10 +92,16 @@ class TestGUIFunctions(unittest.TestCase):
 class TestSpreadsheetFunctions(unittest.TestCase):
 
     def test_get_barcodes(self):
-        pass
+        test_spreadsheet = str(Path(os.getcwd(), "test_data/top containers.1674593882-test3.csv"))
+        test_barcodes = Spreadsheet.get_barcodes(test_spreadsheet)
+        self.assertGreaterEqual(len(test_barcodes), 0)
+        self.assertEqual(type(test_barcodes[0]), str)
 
     def test_get_cell_coordinate(self):
-        pass
+        coordinate = (1,1)
+        row_num = 2
+        test_cell_coord = Spreadsheet.get_cell_coordinate(coordinate, row_num)
+        self.assertEqual(test_cell_coord, "A2")
 
     def test_write_template(self):
         pass

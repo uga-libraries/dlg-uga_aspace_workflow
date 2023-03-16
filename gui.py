@@ -193,10 +193,10 @@ def write_aos(resource_links, selections, cancel, main_values, aspace_instance, 
         if selections:
             for resource in selections:
                 if resource in resource_links:
-                    get_archres(resource, ss_inst, row_num, aspace_instance, main_values, resource_links[resource])
+                    row_num = get_archres(resource, ss_inst, row_num, aspace_instance, main_values, resource_links[resource])
         else:
             for res_id, linked_object in resource_links.items():
-                get_archres(res_id, ss_inst, row_num, aspace_instance, main_values, linked_objects)
+                row_num = get_archres(res_id, ss_inst, row_num, aspace_instance, main_values, linked_objects)
     else:
         logger.info(f'User cancelled resource selection {resource_links.keys()}')
     logger.info(f'Finished {str(row_num-2)} exports')
@@ -272,7 +272,7 @@ def select_resource(resource_ids):
     return selections, cancel
 
 
-def get_archres(res_id, ss_inst, row_num, aspace_instance, main_values, linked_objects):
+def get_archres(res_id, ss_inst, row_num, aspace_instance, main_values, linked_objects):  # TODO write docstrings
     if collid_regex.findall(res_id):
         collnum = collid_regex.findall(res_id)[0]
     else:
@@ -287,6 +287,7 @@ def get_archres(res_id, ss_inst, row_num, aspace_instance, main_values, linked_o
         row_num += 1
         logger.info(f'{arch_obj.record_id} added\n')
         print(f'{arch_obj.record_id} added\n')
+    return row_num
 
 
 def open_file(filepath):

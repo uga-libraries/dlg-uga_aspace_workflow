@@ -59,19 +59,13 @@ class Spreadsheet:
         Intakes the aspace_dlg spreadsheet and writes data from archival object instance row by row
 
         :param str aspace_dlg_template: file location for the user input spreadsheet to write to
-        :param ArchivalObject arch_obj: instance of ArchivalObject class containing data to be written to spreadsheet
+        :param ArchivalObject arch_obj: instance of ArchivalObject class with data to write to spreadsheet
+        :param ResourceObject resource_obj: instance of ResourceObject class with resource data to write to spreadsheet
         :param int row_number: running count of the row number to add data to
         :param str repository: The repository title to fill out in holding institution column
 
         """
         data_columns = {}
-        # try:
-        #     test = open(aspace_dlg_template, "r")  # TODO - add check to see if spreadsheet is open, if so, ask user to close spreadsheet
-        # except OSError as open_error:
-        #     logger.error(f'Could not open {aspace_dlg_template}: {open_error}\n')
-        #     print(f'Could not open {aspace_dlg_template}, {open_error}\n'
-        #           f'Make sure to close the spreadsheet before continuing')
-        # else:
         temp_wb = load_workbook(aspace_dlg_template)
         for sheet in temp_wb:
             for row in sheet.iter_rows(max_row=1, max_col=28):
@@ -130,7 +124,7 @@ class Spreadsheet:
                 elif "dlg_subject_personal" == column:
                     sheet[Spreadsheet.get_cell_coordinate(coordinate, row_number)] = resource_obj.subjper
                 elif "holding institution" == column:
-                    sheet[Spreadsheet.get_cell_coordinate(coordinate, row_number)] = "Hargrett Library"
+                    sheet[Spreadsheet.get_cell_coordinate(coordinate, row_number)] = repository
                 elif "public" == column:
                     sheet[Spreadsheet.get_cell_coordinate(coordinate, row_number)] = "true"
                 elif "Archival Object URI" == column:

@@ -81,34 +81,41 @@ def run_gui():
                     logger.error(f'Top Container file error: User selected file that does not exist\n'
                                  f'{main_values["_TC_FILE_"]}')
                 else:
-                    defaults["_AS-DLG_FILE_"] = main_values["_AS-DLG_FILE_"]
-                    ss_inst = spreadsheet.Spreadsheet
-                    barcodes, bar_error = ss_inst.get_barcodes(main_values['_TC_FILE_'])
-                    if bar_error:
-                        logger.error(f'get_barcodes ERROR: No barcodes found\n{bar_error}')
-                        print(f'get_barcodes ERROR: No barcodes found\n{bar_error}')
+                    try:
+                        open(main_values["_AS-DLG_FILE_"], "r+")
+                    except IOError as open_error:
+                        logger.error(f'Could not open:\n{main_values["_AS-DLG_FILE_"]}\n{open_error}\n')
+                        psg.Popup(f'Could not open:\n{main_values["_AS-DLG_FILE_"]}\n\n'
+                                  f'Make sure to close the spreadsheet before continuing')
                     else:
-                        row_num = 2  # 2 because 1 is header row
-                        for barcode in barcodes:
-                            # uri_error, tc_uri = aspace_instance.get_tcuri(barcode,
-                            #                                               repositories[main_values["_REPO_SELECT_"]])
-                            #
-                            # if uri_error is True:
-                            #     for message in tc_uri:
-                            #         print(message)
-                            # else:
-                            linked_objects, archobjs_error = aspace_instance.get_archobjs(barcode,
-                                                                                          repositories[
-                                                                                              main_values["_REPO_SELECT_"]])
-                            if archobjs_error:
-                                logger.error(f'get_archobjs ERROR: {archobjs_error}')
-                                print(archobjs_error)
-                            else:
-                                resource_links, selections, cancel = parse_linked_objs(linked_objects, aspace_instance)
-                                args = (resource_links, selections, cancel, main_values, aspace_instance, linked_objects,
-                                        row_num, ss_inst, main_window)
-                                start_thread(write_aos, args, main_window)
-                                logger.info("WRITE_AOS_THREAD started")
+                        defaults["_AS-DLG_FILE_"] = main_values["_AS-DLG_FILE_"]
+                        ss_inst = spreadsheet.Spreadsheet
+                        barcodes, bar_error = ss_inst.get_barcodes(main_values['_TC_FILE_'])
+                        if bar_error:
+                            logger.error(f'get_barcodes ERROR: No barcodes found\n{bar_error}')
+                            print(f'get_barcodes ERROR: No barcodes found\n{bar_error}')
+                        else:
+                            row_num = 2  # 2 because 1 is header row
+                            for barcode in barcodes:
+                                # uri_error, tc_uri = aspace_instance.get_tcuri(barcode,
+                                #                                               repositories[main_values["_REPO_SELECT_"]])
+                                #
+                                # if uri_error is True:
+                                #     for message in tc_uri:
+                                #         print(message)
+                                # else:
+                                linked_objects, archobjs_error = aspace_instance.get_archobjs(barcode,
+                                                                                              repositories[
+                                                                                                  main_values["_REPO_SELECT_"]])
+                                if archobjs_error:
+                                    logger.error(f'get_archobjs ERROR: {archobjs_error}')
+                                    print(archobjs_error)
+                                else:
+                                    resource_links, selections, cancel = parse_linked_objs(linked_objects, aspace_instance)
+                                    args = (resource_links, selections, cancel, main_values, aspace_instance, linked_objects,
+                                            row_num, ss_inst, main_window)
+                                    start_thread(write_aos, args, main_window)
+                                    logger.info("WRITE_AOS_THREAD started")
         if main_event in (WRITE_AOS_THREAD):
             main_window[f'{"_WRITE_AOS_"}'].update(disabled=False)
             main_window[f'{"_OPEN_AS-DLG_"}'].update(disabled=False)
@@ -272,7 +279,19 @@ def select_resource(resource_ids):
     return selections, cancel
 
 
-def get_archres(res_id, ss_inst, row_num, aspace_instance, main_values, linked_objects):  # TODO write docstrings
+def get_archres(res_id, ss_inst, row_num, aspace_instance, main_values, linked_objects):
+    """
+    Creates an ArchivalObject and Resource instances and writes data to the user provided template spreadsheet
+
+    :param str res_id: resource identifier
+    :param ss_inst: instance of the openpyxl spreadsheet for the user provided template spreadsheet to write to
+    :param int row_num: row number counter to track how many rows have been written to
+    :param aspace_instance: instance of ArchivesSpace from aspace.py
+    :param dict main_values: main window GUI values
+    :param list linked_objects: archival object json strings linked to the associated barcode
+
+    :return int row_num: row number counter to track how many rows have been written to
+    """
     if collid_regex.findall(res_id):
         collnum = collid_regex.findall(res_id)[0]
     else:

@@ -104,15 +104,15 @@ def run_gui():
                                 #     for message in tc_uri:
                                 #         print(message)
                                 # else:
-                                linked_objects, archobjs_error = aspace_instance.get_archobjs(barcode,
-                                                                                              repositories[
-                                                                                                  main_values["_REPO_SELECT_"]])
+                                linked_objects, archobjs_error = aspace_instance.get_archobjs(barcode, repositories[main_values["_REPO_SELECT_"]])
                                 if archobjs_error:
                                     logger.error(f'get_archobjs ERROR: {archobjs_error}')
                                     print(archobjs_error)
                                 else:
-                                    resource_links, selections, cancel = parse_linked_objs(linked_objects, aspace_instance)
-                                    args = (resource_links, selections, cancel, main_values, aspace_instance, linked_objects,
+                                    resource_links, selections, cancel = parse_linked_objs(linked_objects,
+                                                                                           aspace_instance)
+                                    args = (resource_links, selections, cancel, main_values, aspace_instance,
+                                            linked_objects,
                                             row_num, ss_inst, main_window)
                                     start_thread(write_aos, args, main_window)
                                     logger.info("WRITE_AOS_THREAD started")
@@ -134,7 +134,8 @@ def get_aspace_login(defaults):
     :param defaults: contains data from defaults.json file, all data the user has specified as default
 
     :returns bool close_program: if a user exits the popup, this will return true and end run_gui()
-    :returns aspace_instance: an instance of the ASpace class, containing the ASnake client for accessing and connecting to the API
+    :returns aspace_instance: an instance of the ASpace class, containing the ASnake client for accessing and connecting
+     to the API
     :returns dict repositories: repositories in the ASpace instance, Name (key): repo_id_# (value)
     """
     aspace_instance = None
@@ -200,7 +201,8 @@ def write_aos(resource_links, selections, cancel, main_values, aspace_instance, 
         if selections:
             for resource in selections:
                 if resource in resource_links:
-                    row_num = get_archres(resource, ss_inst, row_num, aspace_instance, main_values, resource_links[resource])
+                    row_num = get_archres(resource, ss_inst, row_num, aspace_instance, main_values,
+                                          resource_links[resource])
         else:
             for res_id, linked_object in resource_links.items():
                 row_num = get_archres(res_id, ss_inst, row_num, aspace_instance, main_values, linked_objects)
@@ -327,8 +329,6 @@ def open_file(filepath):
 def delete_log_files():  # unittest for this? how?
     """
     Deletes log file(s) found in logs folder if file(s) are older than 1 month.
-
-    :returns None:
     """
     if os.path.isdir(Path(os.getcwd(), "logs")) is True:
         logsdir = str(Path(os.getcwd(), "logs"))
@@ -352,8 +352,6 @@ def start_thread(function, args, gui_window):
     :param function: the function to pass to the thread
     :param tuple args: the arguments to pass to the function with ending ,. Ex. (arg, arg, arg,)
     :param gui_window: the GUI window used by PySimpleGUI. Used to return an event
-
-    :returns None:
     """
     logger.info(f'Starting thread: {function}')
     ead_thread = threading.Thread(target=function, args=args)

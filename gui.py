@@ -65,6 +65,7 @@ def run_gui():
             break
         if main_event == "_SAVE_REPO_":
             defaults["repo_default"] = main_values["_REPO_SELECT_"]
+            logger.info(f'User saved repository default: {main_values["_REPO_SELECT_"]}')
         if main_event == "_WRITE_AOS_":
             if not main_values["_REPO_SELECT_"]:
                 psg.Popup("WARNING!\nPlease select a repository")
@@ -114,8 +115,10 @@ def run_gui():
                                     args = (resource_links, selections, cancel, main_values, aspace_instance,
                                             linked_objects,
                                             row_num, ss_inst, main_window)
-                                    start_thread(write_aos, args, main_window)
-                                    logger.info("WRITE_AOS_THREAD started")
+                                    row_num = write_aos(resource_links, selections, cancel, main_values,
+                                                        aspace_instance, linked_objects, row_num, ss_inst, main_window)
+                                    # start_thread(write_aos, args, main_window)  # TODO - when there are multiple barcodes, multiple threads are created and write over each other - causing the errors!
+                                    logger.info("WRITE_AOS_THREAD started")   # TODO - change GUI to take in raw input of barcodes or top container URIs like in ASpace batch exporter w/resource ids
         if main_event in (WRITE_AOS_THREAD):
             main_window[f'{"_WRITE_AOS_"}'].update(disabled=False)
             main_window[f'{"_OPEN_AS-DLG_"}'].update(disabled=False)
@@ -165,10 +168,12 @@ def get_aspace_login(defaults):
                 api_message = aspace_instance.test_api()
                 if api_message:
                     psg.Popup(api_message)
+                    logger.info(api_message)
                 else:
                     connect_client = aspace_instance.aspace_login()
                     if connect_client is not None:
                         psg.Popup(connect_client)
+                        logger.error(connect_client)
                     else:
                         repositories = aspace_instance.get_repos()
                         defaults["as_api"] = values_log["_ASPACE_API_"]
@@ -196,6 +201,8 @@ def write_aos(resource_links, selections, cancel, main_values, aspace_instance, 
     :param int row_num: row counter - keeps track of which row to write to
     :param ss_inst: openpyxl Sheet instance of the current sheet a user is writing to
     :param gui_window: PySimpleGUI's window class instance, used for tracking threads
+
+    :return int row_num: row counter - keeps track of which row to write to
     """
     if cancel is not True:
         if selections:
@@ -212,6 +219,7 @@ def write_aos(resource_links, selections, cancel, main_values, aspace_instance, 
     trailing_line = 76 - len(f'Finished {str(row_num-2)} exports') - (len(str(row_num-2)) - 1)
     print("\n" + "-" * 55 + "Finished {} exports".format(str(row_num-2)) + "-" * trailing_line + "\n")
     gui_window.write_event_value('-WAOS_THREAD-', (threading.current_thread().name,))
+    return row_num
 
 
 def parse_linked_objs(linked_objects, aspace_instance):
@@ -303,8 +311,14 @@ def get_archres(res_id, ss_inst, row_num, aspace_instance, main_values, linked_o
     for linked_object in linked_objects:
         arch_obj = aspace.ArchivalObject(linked_object, dlg_id)
         resource_obj = arch_obj.parse_archobj(aspace_instance.client, resource_obj)
-        ss_inst.write_template(main_values["_AS-DLG_FILE_"], arch_obj, resource_obj, row_num,
-                               main_values["_REPO_SELECT_"])
+        try:
+            ss_inst.write_template(main_values["_AS-DLG_FILE_"], arch_obj, resource_obj, row_num,
+                                   main_values["_REPO_SELECT_"])
+        except Exception as e:
+            print(f'Error writing data to spreadsheet: {e}\n'
+                  f'Archival Object URI: {arch_obj.arch_obj_uri}\n')
+            logger.error(f'Error writing data to spreadsheet: {e}\n'
+                         f'Archival Object URI: {arch_obj.arch_obj_uri}\n')
         row_num += 1
         logger.info(f'{arch_obj.record_id} added\n')
         print(f'{arch_obj.record_id} added\n')

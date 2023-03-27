@@ -112,9 +112,9 @@ def run_gui():
                                 else:
                                     resource_links, selections, cancel = parse_linked_objs(linked_objects,
                                                                                            aspace_instance)
-                                    args = (resource_links, selections, cancel, main_values, aspace_instance,
-                                            linked_objects,
-                                            row_num, ss_inst, main_window)
+                                    # args = (resource_links, selections, cancel, main_values, aspace_instance,
+                                    #         linked_objects,
+                                    #         row_num, ss_inst, main_window)
                                     row_num = write_aos(resource_links, selections, cancel, main_values,
                                                         aspace_instance, linked_objects, row_num, ss_inst, main_window)
                                     # start_thread(write_aos, args, main_window)  # TODO - when there are multiple barcodes, multiple threads are created and write over each other - causing the errors!

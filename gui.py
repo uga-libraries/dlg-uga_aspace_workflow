@@ -35,6 +35,7 @@ def run_gui():
 
     :returns None:
     """
+    gc.disable()
     defaults = psg.UserSettings()
     close_program, aspace_instance, repositories = get_aspace_login(defaults)
 

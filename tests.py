@@ -1,7 +1,4 @@
-import os
 import unittest
-import aspace
-from asnake.client import ASnakeClient
 
 import gui
 from aspace import *

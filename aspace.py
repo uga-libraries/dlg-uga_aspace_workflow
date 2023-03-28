@@ -326,7 +326,6 @@ class ResourceObject:
         Intakes an ASpace client and gets the resource info for an archival object and assigns instance variables
 
         :param asp_client: ArchivesSnake client as created through ASnakeClient
-        :param str resource_uri: ArchivesSpace URI for the parent resource
 
         :return None:
         """

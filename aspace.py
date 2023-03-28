@@ -275,7 +275,9 @@ class ArchivalObject:
             if key == "resource":
                 self.resource = json_info["resource"]["ref"]
                 if self.resource != resource_obj.uri:
-                    resource_obj.get_resource_info(asp_client, self.resource)
+                    resource_info = asp_client.get(self.resource).json()  # error here
+                    resource_obj = ResourceObject(resource_info)
+                    resource_obj.get_resource_info(asp_client)
             # Get archival object URI
             if key == "uri":
                 self.arch_obj_uri = json_info["uri"]
@@ -298,8 +300,10 @@ class ArchivalObject:
 
 class ResourceObject:
 
-    def __init__(self):
+    def __init__(self, resource_object=None):
         """Resource record from ASpace with specific fields for entry into DLG workflow"""
+        self.resource_data = resource_object
+        """dict: Resource data in ArchivesSpace"""
         self.uri = ""
         """str: ArchivesSpace URI for the parent resource"""
         self.language = ""
@@ -317,7 +321,7 @@ class ResourceObject:
         self.subjspa = ""
         """str: Subject with type geographic for the parent resource record"""
 
-    def get_resource_info(self, asp_client, resource_uri):
+    def get_resource_info(self, asp_client):
         """
         Intakes an ASpace client and gets the resource info for an archival object and assigns instance variables
 
@@ -326,7 +330,6 @@ class ResourceObject:
 
         :return None:
         """
-        resource_info = asp_client.get(resource_uri).json()
 
         # json_object = json.dumps(resource_info, indent=4)  # Getting proper json data from resource for testing
         # # Writing to test_data/archival_object.json
@@ -334,19 +337,19 @@ class ResourceObject:
         #     outfile.write(json_object)
 
         # Set resource_uri
-        self.uri = resource_info["uri"]
+        self.uri = self.resource_data["uri"]
 
         # Get Language of Materials
         combined_lang = ""
-        for language in resource_info["lang_materials"]:
+        for language in self.resource_data["lang_materials"]:
             if "language_and_script" in language:
                 combined_lang += f'{language["language_and_script"]["language"]}||'
         self.language = combined_lang[:-2]
 
-        for key, value in resource_info.items():
+        for key, value in self.resource_data.items():
             # Get Preferred Citation note
             if "notes" == key:
-                for note in resource_info["notes"]:
+                for note in self.resource_data["notes"]:
                     if "type" in note:
                         if note["type"] == "prefercite":
                             for subnote in note["subnotes"]:
@@ -355,7 +358,7 @@ class ResourceObject:
             if "linked_agents" == key:
                 creators = ""
                 personals = ""
-                for linked_agent in resource_info["linked_agents"]:
+                for linked_agent in self.resource_data["linked_agents"]:
                     if linked_agent["role"] == "creator":
                         agent_ref = linked_agent["ref"]
                         agent_json = asp_client.get(agent_ref, params={"resolve[]": True}).json()
@@ -376,7 +379,7 @@ class ResourceObject:
                 subjects = ""
                 spatials = ""
                 mediums = ""
-                for subject in resource_info["subjects"]:
+                for subject in self.resource_data["subjects"]:
                     subject_ref = subject["ref"]
                     subject_json = asp_client.get(subject_ref, params={"resolve[]": True}).json()
                     for subject_field, subject_value in subject_json.items():

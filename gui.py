@@ -35,6 +35,7 @@ def run_gui():
 
     :returns None:
     """
+    gc.disable()
     defaults = psg.UserSettings()
     close_program, aspace_instance, repositories = get_aspace_login(defaults)
 
@@ -118,7 +119,10 @@ def run_gui():
                                     row_num = write_aos(resource_links, selections, cancel, main_values,
                                                         aspace_instance, linked_objects, row_num, ss_inst, main_window)
                                     # start_thread(write_aos, args, main_window)  # TODO - when there are multiple barcodes, multiple threads are created and write over each other - causing the errors!
-                                    logger.info("WRITE_AOS_THREAD started")   # TODO - change GUI to take in raw input of barcodes or top container URIs like in ASpace batch exporter w/resource ids
+                                    logger.info("WRITE_AOS_THREAD started")  # TODO - change GUI to take in raw input of barcodes or top container URIs like in ASpace batch exporter w/resource ids
+                            logger.info(f'Finished {str(row_num - 2)} exports')
+                            trailing_line = 76 - len(f'Finished {str(row_num - 2)} exports') - (len(str(row_num - 2)) - 1)
+                            print("\n" + "-" * 55 + "Finished {} exports".format(str(row_num - 2)) + "-" * trailing_line + "\n")
         if main_event in (WRITE_AOS_THREAD):
             main_window[f'{"_WRITE_AOS_"}'].update(disabled=False)
             main_window[f'{"_OPEN_AS-DLG_"}'].update(disabled=False)
@@ -215,9 +219,6 @@ def write_aos(resource_links, selections, cancel, main_values, aspace_instance, 
                 row_num = get_archres(res_id, ss_inst, row_num, aspace_instance, main_values, linked_objects)
     else:
         logger.info(f'User cancelled resource selection {resource_links.keys()}')
-    logger.info(f'Finished {str(row_num-2)} exports')
-    trailing_line = 76 - len(f'Finished {str(row_num-2)} exports') - (len(str(row_num-2)) - 1)
-    print("\n" + "-" * 55 + "Finished {} exports".format(str(row_num-2)) + "-" * trailing_line + "\n")
     gui_window.write_event_value('-WAOS_THREAD-', (threading.current_thread().name,))
     return row_num
 

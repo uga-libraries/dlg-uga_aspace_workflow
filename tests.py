@@ -1,7 +1,4 @@
-import os
 import unittest
-import aspace
-from asnake.client import ASnakeClient
 
 import gui
 from aspace import *
@@ -57,13 +54,15 @@ class TestASpaceFunctions(unittest.TestCase):
         self.assertEqual(archobj_inst.child, "folder 23")
 
     def test_get_resource_info(self):
-        self.local_aspace.aspace_login()
-        resource_ex = aspace.ResourceObject()
-        resource_ex.get_resource_info(self.local_aspace.client, "/repositories/4/resources/3155")
-        self.assertEqual(resource_ex.language, "eng")
-        self.assertEqual(resource_ex.subjper, "Snelling, Paula||Smith, Esther")
-        self.assertEqual(resource_ex.citation, "Lillian Eugenia Smith papers, ms1283a. Hargrett Rare Book and "
-                                               "Manuscript Library, The University of Georgia Libraries.")
+        archobj_example = Path(os.getcwd(), "test_data/resource.json")
+        with open(archobj_example, "r", encoding='utf-8') as resource_data:
+            test_data = json.loads(resource_data.read())
+            resource_ex = aspace.ResourceObject(test_data)
+            resource_ex.get_resource_info(self.local_aspace.client)
+            self.assertEqual(resource_ex.language, "eng")
+            self.assertEqual(resource_ex.subjper, "Snelling, Paula||Smith, Esther")
+            self.assertEqual(resource_ex.citation, "Lillian Eugenia Smith papers, ms1283a. Hargrett Rare Book and "
+                                                   "Manuscript Library, The University of Georgia Libraries.")
 
     # test for grabbing archival objects get_archobjs
 
@@ -93,9 +92,10 @@ class TestSpreadsheetFunctions(unittest.TestCase):
 
     def test_get_barcodes(self):
         test_spreadsheet = str(Path(os.getcwd(), "test_data/top containers.1674593882-test3.csv"))
-        test_barcodes = Spreadsheet.get_barcodes(test_spreadsheet)
+        test_barcodes, error = Spreadsheet.get_barcodes(test_spreadsheet)
         self.assertGreaterEqual(len(test_barcodes), 0)
         self.assertEqual(type(test_barcodes[0]), str)
+        self.assertEqual(type(error), str)
 
     def test_get_cell_coordinate(self):
         coordinate = (1,1)

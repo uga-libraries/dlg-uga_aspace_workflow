@@ -144,7 +144,7 @@ class ArchivalObject:
         """
         Archival object with specific fields for DLG workflow
 
-        :param json archival_object: json object of the archival object
+        :param archival_object: json object of the archival object
         :param str dlg_id: ID for DLG Collection ID column
         """
         self.arch_obj = archival_object
@@ -289,7 +289,7 @@ class ArchivalObject:
                 try:
                     int_indicator = int(indicator)
                 except Exception:
-                    logger.info(f'TypeError with: {self.arch_obj_uri}\n{indicators}')
+                    logger.error(f'TypeError with: {self.arch_obj_uri}\n{indicators}')
                     record_id_composite += f'{indicator}?-'
                 else:
                     record_id_composite += f'{int_indicator:03}-'
@@ -301,7 +301,11 @@ class ArchivalObject:
 class ResourceObject:
 
     def __init__(self, resource_object=None):
-        """Resource record from ASpace with specific fields for entry into DLG workflow"""
+        """
+        Resource record from ASpace with specific fields for entry into DLG workflow
+
+        :param dict resource_object: dictionary of the resource
+        """
         self.resource_data = resource_object
         """dict: Resource data in ArchivesSpace"""
         self.uri = ""

@@ -24,6 +24,7 @@ id_field_regex = re.compile(r"(^id_+\d)")
 collid_regex = re.compile(r"(?<=ms|ua).*|(?<=MS ).*")
 
 
+@logger.catch
 def run_gui():
     """
     Handles the GUI operation as outlined by PySimpleGUI's guidelines.
@@ -45,13 +46,13 @@ def run_gui():
 
     layout = [[psg.Text("Choose your repository:", font=("Roboto", 12))],
               [psg.DropDown(list(repositories.keys()), readonly=True,
-                            default_value=defaults["repo_default"], key="_REPO_SELECT_",),
+                            default_value=defaults["repo_default"], key="_REPO_SELECT_", auto_size_text=True),
                psg.Button(" SAVE ", key="_SAVE_REPO_")],
-              [psg.FileBrowse(' Select Top Container File ',
-                              file_types=(("CSV Files", "*.csv"),),),
-               psg.InputText(key='_TC_FILE_')],
-              [psg.FileBrowse(' Select ASpace>DLG Template ', file_types=(("Excel Files", "*.xlsx"),),),
-               psg.InputText(default_text=defaults['_AS-DLG_FILE_'], key='_AS-DLG_FILE_')],
+              [psg.InputText(key='_TC_FILE_'),
+               psg.FileBrowse(' Select Top Container File ',
+                              file_types=(("CSV Files", "*.csv"),),)],
+              [psg.InputText(default_text=defaults['_AS-DLG_FILE_'], key='_AS-DLG_FILE_'),
+               psg.FileBrowse(' Select ASpace>DLG Template ', file_types=(("Excel Files", "*.xlsx"),),)],
               [psg.Button(' START ', key='_WRITE_AOS_', disabled=False)],
               [psg.Output(size=(80, 18), key="_output_")],
               [psg.Button(" Open ASpace > DLG Template File ", key="_OPEN_AS-DLG_", disabled=False)]]
@@ -119,7 +120,7 @@ def run_gui():
                                     row_num = write_aos(resource_links, selections, cancel, main_values,
                                                         aspace_instance, linked_objects, row_num, ss_inst, main_window)
                                     # start_thread(write_aos, args, main_window)  # TODO - when there are multiple barcodes, multiple threads are created and write over each other - causing the errors!
-                                    logger.info("WRITE_AOS_THREAD started")  # TODO - change GUI to take in raw input of barcodes or top container URIs like in ASpace batch exporter w/resource ids
+                                    # logger.info("WRITE_AOS_THREAD started")  # TODO - change GUI to take in raw input of barcodes or top container URIs like in ASpace batch exporter w/resource ids
                             logger.info(f'Finished {str(row_num - 2)} exports')
                             trailing_line = 76 - len(f'Finished {str(row_num - 2)} exports') - (len(str(row_num - 2)) - 1)
                             print("\n" + "-" * 55 + "Finished {} exports".format(str(row_num - 2)) + "-" * trailing_line + "\n")
@@ -172,7 +173,7 @@ def get_aspace_login(defaults):
                 api_message = aspace_instance.test_api()
                 if api_message:
                     psg.Popup(api_message)
-                    logger.info(api_message)
+                    logger.error(api_message)
                 else:
                     connect_client = aspace_instance.aspace_login()
                     if connect_client is not None:

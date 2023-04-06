@@ -62,7 +62,6 @@ class Spreadsheet:
         :param ResourceObject resource_obj: instance of ResourceObject class with resource data to write to spreadsheet
         :param int row_number: running count of the row number to add data to
         :param str repository: The repository title to fill out in holding institution column
-
         """
         data_columns = {}
         temp_wb = load_workbook(aspace_dlg_template)

@@ -44,18 +44,28 @@ def run_gui():
         logger.info("User initiated closing program")
         sys.exit()
 
-    layout = [[psg.Text("Choose your repository:", font=("Roboto", 12))],
-              [psg.DropDown(list(repositories.keys()), readonly=True,
-                            default_value=defaults["repo_default"], key="_REPO_SELECT_", auto_size_text=True),
-               psg.Button(" SAVE ", key="_SAVE_REPO_")],
-              [psg.InputText(key='_TC_FILE_'),
-               psg.FileBrowse(' Select Top Container File ',
-                              file_types=(("CSV Files", "*.csv"),),)],
-              [psg.InputText(default_text=defaults['_AS-DLG_FILE_'], key='_AS-DLG_FILE_'),
-               psg.FileBrowse(' Select ASpace>DLG Template ', file_types=(("Excel Files", "*.xlsx"),),)],
-              [psg.Button(' START ', key='_WRITE_AOS_', disabled=False)],
-              [psg.Output(size=(80, 18), key="_output_")],
-              [psg.Button(" Open ASpace > DLG Template File ", key="_OPEN_AS-DLG_", disabled=False)]]
+    column1 = [[psg.Text("Enter Barcodes or Top Container URIs:", font=("Roboto", 12))],
+               [psg.Multiline(key="resource_id_input", size=(40, 18), focus=True,
+                              tooltip=' Enter resource identifiers here and seperate either by comma or '
+                                      'newline (enter) ')],
+               [psg.Text("OR Select a CSV of Top Containers", font=("Roboto", 12))],
+               [psg.InputText(key='_TC_FILE_', size=(42, 5))],
+               [psg.FileBrowse(' Select Top Container File ',
+                               file_types=(("CSV Files", "*.csv"),), )]]
+
+    column2 = [[psg.Text("Choose your repository:", font=("Roboto", 12))],
+               [psg.DropDown(list(repositories.keys()), readonly=True,
+                             default_value=defaults["repo_default"], size=(50, 5), key="_REPO_SELECT_", auto_size_text=True),
+                psg.Push(),
+                psg.Button(" SAVE ", key="_SAVE_REPO_")],
+               [psg.InputText(default_text=defaults['_AS-DLG_FILE_'], size=(50, 5), key='_AS-DLG_FILE_')],
+               [psg.FileBrowse(' Select ASpace>DLG Template ', file_types=(("Excel Files", "*.xlsx"),), )],
+               [psg.Button(' START ', key='_WRITE_AOS_', disabled=False),
+                psg.Push(),
+                psg.Button(" Open ASpace > DLG Template File ", key="_OPEN_AS-DLG_", disabled=False)],
+               [psg.Output(size=(60, 18), key="_output_")]]
+
+    layout = [[psg.Column(column1), psg.Column(column2)]]
 
     main_window = psg.Window('ASpace > DLG Workflow', layout, resizable=True)
     logger.info('Initiate GUI window')
@@ -78,7 +88,7 @@ def run_gui():
                               "\nTry selecting another file")
                     logger.error(f'ASpace>DLG Template error: User selected file that does not exist\n'
                                  f'{main_values["_AS-DLG_FILE_"]}')
-                elif os.path.exists(main_values["_TC_FILE_"]) is not True:
+                elif os.path.exists(main_values["_TC_FILE_"]) is not True:  # TODO: make this optional
                     psg.Popup("WARNING!\nThe file you selected for the Top Container file does not exist."
                               "\nTry selecting another file")
                     logger.error(f'Top Container file error: User selected file that does not exist\n'

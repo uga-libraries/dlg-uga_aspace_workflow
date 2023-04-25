@@ -45,25 +45,22 @@ def run_gui():
         sys.exit()
 
     column1 = [[psg.Text("Enter Barcodes or Top Container URIs:", font=("Roboto", 12))],
-               [psg.Multiline(key="resource_id_input", size=(40, 18), focus=True,
-                              tooltip=' Enter resource identifiers here and seperate either by comma or '
-                                      'newline (enter) ')],
-               [psg.Text("OR Select a CSV of Top Containers", font=("Roboto", 12))],
-               [psg.InputText(key='_TC_FILE_', size=(42, 5))],
-               [psg.FileBrowse(' Select Top Container File ',
-                               file_types=(("CSV Files", "*.csv"),), )]]
+               [psg.Multiline(key="_CONT_INPUT_", size=(37, 25), focus=True,
+                              tooltip=' Enter top container barcodes or URIs here and separate either by comma or '
+                                      'newline (enter) ')]]
 
     column2 = [[psg.Text("Choose your repository:", font=("Roboto", 12))],
                [psg.DropDown(list(repositories.keys()), readonly=True,
-                             default_value=defaults["repo_default"], size=(50, 5), key="_REPO_SELECT_", auto_size_text=True),
+                             default_value=defaults["repo_default"], size=(50, 5), key="_REPO_SELECT_",
+                             auto_size_text=True),
                 psg.Push(),
                 psg.Button(" SAVE ", key="_SAVE_REPO_")],
-               [psg.InputText(default_text=defaults['_AS-DLG_FILE_'], size=(50, 5), key='_AS-DLG_FILE_')],
                [psg.FileBrowse(' Select ASpace>DLG Template ', file_types=(("Excel Files", "*.xlsx"),), )],
+               [psg.InputText(default_text=defaults['_AS-DLG_FILE_'], size=(50, 5), key='_AS-DLG_FILE_')],
                [psg.Button(' START ', key='_WRITE_AOS_', disabled=False),
                 psg.Push(),
                 psg.Button(" Open ASpace > DLG Template File ", key="_OPEN_AS-DLG_", disabled=False)],
-               [psg.Output(size=(60, 18), key="_output_")]]
+               [psg.Output(size=(60, 17), key="_OUTPUT_")]]
 
     layout = [[psg.Column(column1), psg.Column(column2)]]
 
@@ -88,11 +85,6 @@ def run_gui():
                               "\nTry selecting another file")
                     logger.error(f'ASpace>DLG Template error: User selected file that does not exist\n'
                                  f'{main_values["_AS-DLG_FILE_"]}')
-                elif os.path.exists(main_values["_TC_FILE_"]) is not True:  # TODO: make this optional
-                    psg.Popup("WARNING!\nThe file you selected for the Top Container file does not exist."
-                              "\nTry selecting another file")
-                    logger.error(f'Top Container file error: User selected file that does not exist\n'
-                                 f'{main_values["_TC_FILE_"]}')
                 else:
                     try:
                         open(main_values["_AS-DLG_FILE_"], "r+")
@@ -103,10 +95,11 @@ def run_gui():
                     else:
                         defaults["_AS-DLG_FILE_"] = main_values["_AS-DLG_FILE_"]
                         ss_inst = spreadsheet.Spreadsheet
-                        barcodes, bar_error = ss_inst.get_barcodes(main_values['_TC_FILE_'])
-                        if bar_error:
-                            logger.error(f'get_barcodes ERROR: No barcodes found\n{bar_error}')
-                            print(f'get_barcodes ERROR: No barcodes found\n{bar_error}')
+                        try:
+                            barcodes = ss_inst.sort_input(main_values['_CONT_INPUT_'])
+                        except Exception as sort_error:
+                            logger.error(f'sort_input ERROR:\n{sort_error}')
+                            print(f'sort_input ERROR:\n{sort_error}')
                         else:
                             row_num = 2  # 2 because 1 is header row
                             for barcode in barcodes:
@@ -132,8 +125,8 @@ def run_gui():
                                     # start_thread(write_aos, args, main_window)  # TODO - when there are multiple barcodes, multiple threads are created and write over each other - causing the errors!
                                     # logger.info("WRITE_AOS_THREAD started")  # TODO - change GUI to take in raw input of barcodes or top container URIs like in ASpace batch exporter w/resource ids
                             logger.info(f'Finished {str(row_num - 2)} exports')
-                            trailing_line = 76 - len(f'Finished {str(row_num - 2)} exports') - (len(str(row_num - 2)) - 1)
-                            print("\n" + "-" * 55 + "Finished {} exports".format(str(row_num - 2)) + "-" * trailing_line + "\n")
+                            trailing_line = 56 - len(f'Finished {str(row_num - 2)} exports') - (len(str(row_num - 2)) - 1)
+                            print("\n" + "-" * 40 + "Finished {} exports".format(str(row_num - 2)) + "-" * trailing_line + "\n")
         if main_event in (WRITE_AOS_THREAD):
             main_window[f'{"_WRITE_AOS_"}'].update(disabled=False)
             main_window[f'{"_OPEN_AS-DLG_"}'].update(disabled=False)

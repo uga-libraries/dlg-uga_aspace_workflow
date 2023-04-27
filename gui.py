@@ -36,7 +36,7 @@ def run_gui():
 
     :returns None:
     """
-    gc.disable()
+    # gc.disable()
     defaults = psg.UserSettings()
     close_program, aspace_instance, repositories = get_aspace_login(defaults)
 
@@ -67,7 +67,8 @@ def run_gui():
     main_window = psg.Window('ASpace > DLG Workflow', layout, resizable=True)
     logger.info('Initiate GUI window')
     while True:
-        gc.collect()
+
+        # gc.collect()
         main_event, main_values = main_window.Read()
         if main_event == 'Cancel' or main_event is None or main_event == "Exit":
             logger.info("User initiated closing program")
@@ -117,9 +118,9 @@ def run_gui():
                                 else:
                                     resource_links, selections, cancel = parse_linked_objs(linked_objects,
                                                                                            aspace_instance)
-                                    args = (resource_links, selections, cancel, main_values, aspace_instance,
-                                            linked_objects,
-                                            row_num, ss_inst, main_window)
+                                    # args = (resource_links, selections, cancel, main_values, aspace_instance,
+                                    #         linked_objects,
+                                    #         row_num, ss_inst, main_window)
                                     row_num = write_aos(resource_links, selections, cancel, main_values,
                                                         aspace_instance, linked_objects, row_num, ss_inst, main_window)
                                     # start_thread(write_aos, args, main_window)  # TODO - when there are multiple barcodes, multiple threads are created and write over each other - causing the errors!
@@ -223,7 +224,7 @@ def write_aos(resource_links, selections, cancel, main_values, aspace_instance, 
                 row_num = get_archres(res_id, ss_inst, row_num, aspace_instance, main_values, linked_objects)
     else:
         logger.info(f'User cancelled resource selection {resource_links.keys()}')
-    gui_window.write_event_value('-WAOS_THREAD-', (threading.current_thread().name,))
+    # gui_window.write_event_value('-WAOS_THREAD-', (threading.current_thread().name,))
     return row_num
 
 

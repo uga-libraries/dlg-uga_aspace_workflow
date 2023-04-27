@@ -4,6 +4,7 @@ import os
 import platform
 import PySimpleGUI as psg
 import re
+import shutil
 import spreadsheet
 import subprocess
 import sys
@@ -38,6 +39,7 @@ def run_gui():
     """
     # gc.disable()
     defaults = psg.UserSettings()
+    work_file = ""
     close_program, aspace_instance, repositories = get_aspace_login(defaults)
 
     if close_program is True:
@@ -94,7 +96,8 @@ def run_gui():
                         psg.Popup(f'Could not open:\n{main_values["_AS-DLG_FILE_"]}\n\n'
                                   f'Make sure to close the spreadsheet before continuing')
                     else:
-                        defaults["_AS-DLG_FILE_"] = main_values["_AS-DLG_FILE_"]
+                        work_file = shutil.copy(main_values["_AS-DLG_FILE_"], str(Path(os.getcwd(), "output_files")))
+                        defaults["_AS-DLG_FILE_"] = work_file
                         ss_inst = spreadsheet.Spreadsheet
                         try:
                             barcodes = ss_inst.sort_input(main_values['_CONT_INPUT_'])
@@ -122,7 +125,8 @@ def run_gui():
                                     #         linked_objects,
                                     #         row_num, ss_inst, main_window)
                                     row_num = write_aos(resource_links, selections, cancel, main_values,
-                                                        aspace_instance, linked_objects, row_num, ss_inst, main_window)
+                                                        aspace_instance, linked_objects, row_num, ss_inst, work_file,
+                                                        main_window)
                                     # start_thread(write_aos, args, main_window)  # TODO - when there are multiple barcodes, multiple threads are created and write over each other - causing the errors!
                                     # logger.info("WRITE_AOS_THREAD started")  # TODO - change GUI to take in raw input of barcodes or top container URIs like in ASpace batch exporter w/resource ids
                             logger.info(f'Finished {str(row_num - 2)} exports')
@@ -132,7 +136,10 @@ def run_gui():
             main_window[f'{"_WRITE_AOS_"}'].update(disabled=False)
             main_window[f'{"_OPEN_AS-DLG_"}'].update(disabled=False)
         if main_event == "_OPEN_AS-DLG_":
-            open_file(main_values["_AS-DLG_FILE_"])
+            if work_file:
+                open_file(work_file)
+            else:
+                print("No file found")
 
 
 def get_aspace_login(defaults):
@@ -196,7 +203,7 @@ def get_aspace_login(defaults):
 
 
 def write_aos(resource_links, selections, cancel, main_values, aspace_instance, linked_objects, row_num, ss_inst,
-              gui_window):
+              write_file, gui_window):
     """
     Parses provided spreadsheet for barcodes, searches them in ASpace, parses returned archival objects, and writes to
     user provided spreadsheet template
@@ -209,6 +216,7 @@ def write_aos(resource_links, selections, cancel, main_values, aspace_instance, 
     :param list linked_objects: list of all archival objects associated with the top container
     :param int row_num: row counter - keeps track of which row to write to
     :param ss_inst: openpyxl Sheet instance of the current sheet a user is writing to
+    :param str write_file: path to the file to write to
     :param gui_window: PySimpleGUI's window class instance, used for tracking threads
 
     :return int row_num: row counter - keeps track of which row to write to
@@ -217,7 +225,7 @@ def write_aos(resource_links, selections, cancel, main_values, aspace_instance, 
         if selections:
             for resource in selections:
                 if resource in resource_links:
-                    row_num = get_archres(resource, ss_inst, row_num, aspace_instance, main_values,
+                    row_num = get_archres(resource, ss_inst, row_num, aspace_instance, main_values,  # TODO: finish copying/renaming new file, need to remove links to old template file
                                           resource_links[resource])
         else:
             for res_id, linked_object in resource_links.items():
@@ -380,7 +388,25 @@ def start_thread(function, args, gui_window):
     gui_window[f'{"_OPEN_AS-DLG_"}'].update(disabled=True)
 
 
+def setup_files():
+    """
+    Checks for directories in the current directory the GUI or .exe is located and tries to open defaults.json
+    Returns:
+        json_data (dict): contains data from defaults.json for user's default settings
+    """
+    logger.info(f'Checking setup files...')
+    current_directory = os.getcwd()
+    if not os.path.exists(Path(current_directory, "output_files")):
+        print("\nNo output_files folder found, creating new one...", end='', flush=True)
+        current_directory = os.getcwd()
+        folder = "output_files"
+        source_path = os.path.join(current_directory, folder)
+        os.mkdir(source_path)
+        print("{} folder created\n".format(folder))
+
+
 if __name__ == "__main__":
     logger.info(f'GUI version info:\n{psg.get_versions()}')
     delete_log_files()
+    setup_files()
     run_gui()

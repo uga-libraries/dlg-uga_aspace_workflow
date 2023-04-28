@@ -39,7 +39,8 @@ def run_gui():
     """
     # gc.disable()
     defaults = psg.UserSettings()
-    work_file = ""
+    template_file = ""
+    collection_file = ""
     close_program, aspace_instance, repositories = get_aspace_login(defaults)
 
     if close_program is True:
@@ -57,8 +58,8 @@ def run_gui():
                              auto_size_text=True),
                 psg.Push(),
                 psg.Button(" SAVE ", key="_SAVE_REPO_")],
-               [psg.FileBrowse(' Select ASpace>DLG Template ', file_types=(("Excel Files", "*.xlsx"),), )],
-               [psg.InputText(default_text=defaults['_AS-DLG_FILE_'], size=(50, 5), key='_AS-DLG_FILE_')],
+               [psg.FileBrowse(' Select ASpace>DLG Template ', file_types=(("Excel Files", "*.xlsx"),), ),
+                psg.InputText(default_text=defaults['_AS-DLG_FILE_'], size=(50, 5), key='_AS-DLG_FILE_')],
                [psg.Button(' START ', key='_WRITE_AOS_', disabled=False),
                 psg.Push(),
                 psg.Button(" Open ASpace > DLG Template File ", key="_OPEN_AS-DLG_", disabled=False)],
@@ -96,8 +97,13 @@ def run_gui():
                         psg.Popup(f'Could not open:\n{main_values["_AS-DLG_FILE_"]}\n\n'
                                   f'Make sure to close the spreadsheet before continuing')
                     else:
-                        work_file = shutil.copy(main_values["_AS-DLG_FILE_"], str(Path(os.getcwd(), "output_files")))
-                        defaults["_AS-DLG_FILE_"] = work_file
+                        try:
+                            template_file = shutil.copy(main_values["_AS-DLG_FILE_"], str(Path(os.getcwd(),
+                                                                                           "output_files")))
+                        except OSError as e:
+                            logger.info(f'Tried copying template file, error thrown: {e}')
+                            template_file = str(Path(os.getcwd(), "output_files", Path(main_values["_AS-DLG_FILE_"]).name))
+                        defaults["_AS-DLG_FILE_"] = template_file
                         ss_inst = spreadsheet.Spreadsheet
                         try:
                             barcodes = ss_inst.sort_input(main_values['_CONT_INPUT_'])
@@ -124,20 +130,20 @@ def run_gui():
                                     # args = (resource_links, selections, cancel, main_values, aspace_instance,
                                     #         linked_objects,
                                     #         row_num, ss_inst, main_window)
-                                    row_num = write_aos(resource_links, selections, cancel, main_values,
-                                                        aspace_instance, linked_objects, row_num, ss_inst, work_file,
-                                                        main_window)
+                                    row_num, collection_file = write_aos(resource_links, selections, cancel,
+                                                                         main_values, aspace_instance, linked_objects,
+                                                                         row_num, ss_inst, template_file, main_window)
                                     # start_thread(write_aos, args, main_window)  # TODO - when there are multiple barcodes, multiple threads are created and write over each other - causing the errors!
                                     # logger.info("WRITE_AOS_THREAD started")  # TODO - change GUI to take in raw input of barcodes or top container URIs like in ASpace batch exporter w/resource ids
                             logger.info(f'Finished {str(row_num - 2)} exports')
                             trailing_line = 56 - len(f'Finished {str(row_num - 2)} exports') - (len(str(row_num - 2)) - 1)
                             print("\n" + "-" * 40 + "Finished {} exports".format(str(row_num - 2)) + "-" * trailing_line + "\n")
-        if main_event in (WRITE_AOS_THREAD):
-            main_window[f'{"_WRITE_AOS_"}'].update(disabled=False)
-            main_window[f'{"_OPEN_AS-DLG_"}'].update(disabled=False)
+        # if main_event in (WRITE_AOS_THREAD):
+        #     main_window[f'{"_WRITE_AOS_"}'].update(disabled=False)
+        #     main_window[f'{"_OPEN_AS-DLG_"}'].update(disabled=False)
         if main_event == "_OPEN_AS-DLG_":
-            if work_file:
-                open_file(work_file)
+            if collection_file:
+                open_file(collection_file)
             else:
                 print("No file found")
 
@@ -203,7 +209,7 @@ def get_aspace_login(defaults):
 
 
 def write_aos(resource_links, selections, cancel, main_values, aspace_instance, linked_objects, row_num, ss_inst,
-              write_file, gui_window):
+              template_file, gui_window):
     """
     Parses provided spreadsheet for barcodes, searches them in ASpace, parses returned archival objects, and writes to
     user provided spreadsheet template
@@ -216,24 +222,27 @@ def write_aos(resource_links, selections, cancel, main_values, aspace_instance, 
     :param list linked_objects: list of all archival objects associated with the top container
     :param int row_num: row counter - keeps track of which row to write to
     :param ss_inst: openpyxl Sheet instance of the current sheet a user is writing to
-    :param str write_file: path to the file to write to
+    :param str template_file: path to the template file to copy and rename to collection file
     :param gui_window: PySimpleGUI's window class instance, used for tracking threads
 
     :return int row_num: row counter - keeps track of which row to write to
+    :return str collection_file: filepath for output file generated from template
     """
+    collection_file = ""
     if cancel is not True:
         if selections:
             for resource in selections:
                 if resource in resource_links:
-                    row_num = get_archres(resource, ss_inst, row_num, aspace_instance, main_values,  # TODO: finish copying/renaming new file, need to remove links to old template file
-                                          resource_links[resource])
+                    row_num, collection_file = get_archres(resource, ss_inst, row_num, aspace_instance, main_values,
+                                                           resource_links[resource], template_file)
         else:
             for res_id, linked_object in resource_links.items():
-                row_num = get_archres(res_id, ss_inst, row_num, aspace_instance, main_values, linked_objects)
+                row_num, collection_file = get_archres(res_id, ss_inst, row_num, aspace_instance, main_values, linked_objects,
+                                                       template_file)
     else:
         logger.info(f'User cancelled resource selection {resource_links.keys()}')
     # gui_window.write_event_value('-WAOS_THREAD-', (threading.current_thread().name,))
-    return row_num
+    return row_num, collection_file
 
 
 def parse_linked_objs(linked_objects, aspace_instance):
@@ -303,7 +312,7 @@ def select_resource(resource_ids):
     return selections, cancel
 
 
-def get_archres(res_id, ss_inst, row_num, aspace_instance, main_values, linked_objects):
+def get_archres(res_id, ss_inst, row_num, aspace_instance, main_values, linked_objects, template_file):
     """
     Creates an ArchivalObject and Resource instances and writes data to the user provided template spreadsheet
 
@@ -313,8 +322,10 @@ def get_archres(res_id, ss_inst, row_num, aspace_instance, main_values, linked_o
     :param aspace_instance: instance of ArchivesSpace from aspace.py
     :param dict main_values: main window GUI values
     :param list linked_objects: archival object json strings linked to the associated barcode
+    :param str template_file: path to the template file to copy, rename, and remove
 
     :return int row_num: row number counter to track how many rows have been written to
+    :return str collection_file: filepath for output file generated from template
     """
     if collid_regex.findall(res_id):
         collnum = collid_regex.findall(res_id)[0]
@@ -322,11 +333,19 @@ def get_archres(res_id, ss_inst, row_num, aspace_instance, main_values, linked_o
         collnum = res_id
     dlg_id = f'guan_{collnum}'
     resource_obj = aspace.ResourceObject()
+    collection_file = ""
     for linked_object in linked_objects:
         arch_obj = aspace.ArchivalObject(linked_object, dlg_id)
         resource_obj = arch_obj.parse_archobj(aspace_instance.client, resource_obj)
+        if not collection_file:
+            collection_file = template_file.replace(Path(template_file).stem, arch_obj.dlg_id)
+            if not os.path.exists(collection_file):
+                os.rename(template_file, collection_file)
+            else:
+                if os.path.exists(template_file):
+                    os.remove(template_file)
         try:
-            ss_inst.write_template(main_values["_AS-DLG_FILE_"], arch_obj, resource_obj, row_num,
+            ss_inst.write_template(collection_file, arch_obj, resource_obj, row_num,
                                    main_values["_REPO_SELECT_"])
         except Exception as e:
             print(f'Error writing data to spreadsheet: {e}\n'
@@ -336,7 +355,7 @@ def get_archres(res_id, ss_inst, row_num, aspace_instance, main_values, linked_o
         row_num += 1
         logger.info(f'{arch_obj.record_id} added\n')
         print(f'{arch_obj.record_id} added\n')
-    return row_num
+    return row_num, collection_file
 
 
 def open_file(filepath):

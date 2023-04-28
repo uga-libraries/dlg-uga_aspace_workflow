@@ -1,5 +1,3 @@
-import csv
-from loguru import logger
 from openpyxl import load_workbook, utils
 from openpyxl.styles import PatternFill
 
@@ -9,34 +7,24 @@ class Spreadsheet:
     template provided by the user"""
 
     @staticmethod
-    def get_barcodes(tc_spreadsheet):
+    def sort_input(container_inputs):
         """
         Intakes a spreadsheet and returns a list of barcodes
 
-        :param tc_spreadsheet: spreadsheet object of top containers for retrieving barcodes
+        :param str container_inputs: user input values of top container barcodes or URIs
 
-        :return list barcodes: list of barcodes (str) for top containers
-        :return str error: error message if occurred, empty string otherwise
+        :return list barcodes: list of barcodes or URIs (str) for top containers
         """
         barcodes = []
-        error = ''
-        with open(tc_spreadsheet, newline='') as csvfile:
-            test_reader = csv.reader(csvfile)
-            column_num = 0
-            barcode_col = None
-            for row in test_reader:
-                for value in row:
-                    if value == "barcode_u_sstr":
-                        barcode_col = column_num
-                    else:
-                        column_num += 1
-                if barcode_col is not None:
-                    barcodes.append(row[barcode_col])
-            if barcodes:
-                barcodes.pop(0)
-            else:
-                error = "barcode_u_sstr not found in header"
-        return barcodes, error
+        if "," in container_inputs:
+            csep_containers = [user_input.strip() for user_input in container_inputs.split(",")]
+            for container in csep_containers:
+                linebreak_containers = container.splitlines()
+                for lb_container in linebreak_containers:
+                    barcodes.append(lb_container)
+        else:
+            barcodes = [user_input.strip() for user_input in container_inputs.splitlines()]
+        return barcodes
 
     @staticmethod
     def get_cell_coordinate(coordinate, row_number):
@@ -62,7 +50,6 @@ class Spreadsheet:
         :param ResourceObject resource_obj: instance of ResourceObject class with resource data to write to spreadsheet
         :param int row_number: running count of the row number to add data to
         :param str repository: The repository title to fill out in holding institution column
-
         """
         data_columns = {}
         temp_wb = load_workbook(aspace_dlg_template)

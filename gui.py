@@ -4,6 +4,7 @@ import os
 import platform
 import PySimpleGUI as psg
 import re
+import shutil
 import spreadsheet
 import subprocess
 import sys
@@ -24,6 +25,7 @@ id_field_regex = re.compile(r"(^id_+\d)")
 collid_regex = re.compile(r"(?<=ms|ua).*|(?<=MS ).*")
 
 
+@logger.catch
 def run_gui():
     """
     Handles the GUI operation as outlined by PySimpleGUI's guidelines.
@@ -35,31 +37,40 @@ def run_gui():
 
     :returns None:
     """
-    gc.disable()
+    # gc.disable()
     defaults = psg.UserSettings()
+    work_file = ""
     close_program, aspace_instance, repositories = get_aspace_login(defaults)
 
     if close_program is True:
         logger.info("User initiated closing program")
         sys.exit()
 
-    layout = [[psg.Text("Choose your repository:", font=("Roboto", 12))],
-              [psg.DropDown(list(repositories.keys()), readonly=True,
-                            default_value=defaults["repo_default"], key="_REPO_SELECT_",),
-               psg.Button(" SAVE ", key="_SAVE_REPO_")],
-              [psg.FileBrowse(' Select Top Container File ',
-                              file_types=(("CSV Files", "*.csv"),),),
-               psg.InputText(key='_TC_FILE_')],
-              [psg.FileBrowse(' Select ASpace>DLG Template ', file_types=(("Excel Files", "*.xlsx"),),),
-               psg.InputText(default_text=defaults['_AS-DLG_FILE_'], key='_AS-DLG_FILE_')],
-              [psg.Button(' START ', key='_WRITE_AOS_', disabled=False)],
-              [psg.Output(size=(80, 18), key="_output_")],
-              [psg.Button(" Open ASpace > DLG Template File ", key="_OPEN_AS-DLG_", disabled=False)]]
+    column1 = [[psg.Text("Enter Barcodes or Top Container URIs:", font=("Roboto", 12))],
+               [psg.Multiline(key="_CONT_INPUT_", size=(37, 25), focus=True,
+                              tooltip=' Enter top container barcodes or URIs here and separate either by comma or '
+                                      'newline (enter) ')]]
+
+    column2 = [[psg.Text("Choose your repository:", font=("Roboto", 12))],
+               [psg.DropDown(list(repositories.keys()), readonly=True,
+                             default_value=defaults["repo_default"], size=(50, 5), key="_REPO_SELECT_",
+                             auto_size_text=True),
+                psg.Push(),
+                psg.Button(" SAVE ", key="_SAVE_REPO_")],
+               [psg.FileBrowse(' Select ASpace>DLG Template ', file_types=(("Excel Files", "*.xlsx"),), )],
+               [psg.InputText(default_text=defaults['_AS-DLG_FILE_'], size=(50, 5), key='_AS-DLG_FILE_')],
+               [psg.Button(' START ', key='_WRITE_AOS_', disabled=False),
+                psg.Push(),
+                psg.Button(" Open ASpace > DLG Template File ", key="_OPEN_AS-DLG_", disabled=False)],
+               [psg.Output(size=(60, 17), key="_OUTPUT_")]]
+
+    layout = [[psg.Column(column1), psg.Column(column2)]]
 
     main_window = psg.Window('ASpace > DLG Workflow', layout, resizable=True)
     logger.info('Initiate GUI window')
     while True:
-        gc.collect()
+
+        # gc.collect()
         main_event, main_values = main_window.Read()
         if main_event == 'Cancel' or main_event is None or main_event == "Exit":
             logger.info("User initiated closing program")
@@ -77,11 +88,6 @@ def run_gui():
                               "\nTry selecting another file")
                     logger.error(f'ASpace>DLG Template error: User selected file that does not exist\n'
                                  f'{main_values["_AS-DLG_FILE_"]}')
-                elif os.path.exists(main_values["_TC_FILE_"]) is not True:
-                    psg.Popup("WARNING!\nThe file you selected for the Top Container file does not exist."
-                              "\nTry selecting another file")
-                    logger.error(f'Top Container file error: User selected file that does not exist\n'
-                                 f'{main_values["_TC_FILE_"]}')
                 else:
                     try:
                         open(main_values["_AS-DLG_FILE_"], "r+")
@@ -90,12 +96,14 @@ def run_gui():
                         psg.Popup(f'Could not open:\n{main_values["_AS-DLG_FILE_"]}\n\n'
                                   f'Make sure to close the spreadsheet before continuing')
                     else:
-                        defaults["_AS-DLG_FILE_"] = main_values["_AS-DLG_FILE_"]
+                        work_file = shutil.copy(main_values["_AS-DLG_FILE_"], str(Path(os.getcwd(), "output_files")))
+                        defaults["_AS-DLG_FILE_"] = work_file
                         ss_inst = spreadsheet.Spreadsheet
-                        barcodes, bar_error = ss_inst.get_barcodes(main_values['_TC_FILE_'])
-                        if bar_error:
-                            logger.error(f'get_barcodes ERROR: No barcodes found\n{bar_error}')
-                            print(f'get_barcodes ERROR: No barcodes found\n{bar_error}')
+                        try:
+                            barcodes = ss_inst.sort_input(main_values['_CONT_INPUT_'])
+                        except Exception as sort_error:
+                            logger.error(f'sort_input ERROR:\n{sort_error}')
+                            print(f'sort_input ERROR:\n{sort_error}')
                         else:
                             row_num = 2  # 2 because 1 is header row
                             for barcode in barcodes:
@@ -117,17 +125,21 @@ def run_gui():
                                     #         linked_objects,
                                     #         row_num, ss_inst, main_window)
                                     row_num = write_aos(resource_links, selections, cancel, main_values,
-                                                        aspace_instance, linked_objects, row_num, ss_inst, main_window)
+                                                        aspace_instance, linked_objects, row_num, ss_inst, work_file,
+                                                        main_window)
                                     # start_thread(write_aos, args, main_window)  # TODO - when there are multiple barcodes, multiple threads are created and write over each other - causing the errors!
-                                    logger.info("WRITE_AOS_THREAD started")  # TODO - change GUI to take in raw input of barcodes or top container URIs like in ASpace batch exporter w/resource ids
+                                    # logger.info("WRITE_AOS_THREAD started")  # TODO - change GUI to take in raw input of barcodes or top container URIs like in ASpace batch exporter w/resource ids
                             logger.info(f'Finished {str(row_num - 2)} exports')
-                            trailing_line = 76 - len(f'Finished {str(row_num - 2)} exports') - (len(str(row_num - 2)) - 1)
-                            print("\n" + "-" * 55 + "Finished {} exports".format(str(row_num - 2)) + "-" * trailing_line + "\n")
+                            trailing_line = 56 - len(f'Finished {str(row_num - 2)} exports') - (len(str(row_num - 2)) - 1)
+                            print("\n" + "-" * 40 + "Finished {} exports".format(str(row_num - 2)) + "-" * trailing_line + "\n")
         if main_event in (WRITE_AOS_THREAD):
             main_window[f'{"_WRITE_AOS_"}'].update(disabled=False)
             main_window[f'{"_OPEN_AS-DLG_"}'].update(disabled=False)
         if main_event == "_OPEN_AS-DLG_":
-            open_file(main_values["_AS-DLG_FILE_"])
+            if work_file:
+                open_file(work_file)
+            else:
+                print("No file found")
 
 
 def get_aspace_login(defaults):
@@ -172,7 +184,7 @@ def get_aspace_login(defaults):
                 api_message = aspace_instance.test_api()
                 if api_message:
                     psg.Popup(api_message)
-                    logger.info(api_message)
+                    logger.error(api_message)
                 else:
                     connect_client = aspace_instance.aspace_login()
                     if connect_client is not None:
@@ -191,7 +203,7 @@ def get_aspace_login(defaults):
 
 
 def write_aos(resource_links, selections, cancel, main_values, aspace_instance, linked_objects, row_num, ss_inst,
-              gui_window):
+              write_file, gui_window):
     """
     Parses provided spreadsheet for barcodes, searches them in ASpace, parses returned archival objects, and writes to
     user provided spreadsheet template
@@ -204,6 +216,7 @@ def write_aos(resource_links, selections, cancel, main_values, aspace_instance, 
     :param list linked_objects: list of all archival objects associated with the top container
     :param int row_num: row counter - keeps track of which row to write to
     :param ss_inst: openpyxl Sheet instance of the current sheet a user is writing to
+    :param str write_file: path to the file to write to
     :param gui_window: PySimpleGUI's window class instance, used for tracking threads
 
     :return int row_num: row counter - keeps track of which row to write to
@@ -212,14 +225,14 @@ def write_aos(resource_links, selections, cancel, main_values, aspace_instance, 
         if selections:
             for resource in selections:
                 if resource in resource_links:
-                    row_num = get_archres(resource, ss_inst, row_num, aspace_instance, main_values,
+                    row_num = get_archres(resource, ss_inst, row_num, aspace_instance, main_values,  # TODO: finish copying/renaming new file, need to remove links to old template file
                                           resource_links[resource])
         else:
             for res_id, linked_object in resource_links.items():
                 row_num = get_archres(res_id, ss_inst, row_num, aspace_instance, main_values, linked_objects)
     else:
         logger.info(f'User cancelled resource selection {resource_links.keys()}')
-    gui_window.write_event_value('-WAOS_THREAD-', (threading.current_thread().name,))
+    # gui_window.write_event_value('-WAOS_THREAD-', (threading.current_thread().name,))
     return row_num
 
 
@@ -375,7 +388,25 @@ def start_thread(function, args, gui_window):
     gui_window[f'{"_OPEN_AS-DLG_"}'].update(disabled=True)
 
 
+def setup_files():
+    """
+    Checks for directories in the current directory the GUI or .exe is located and tries to open defaults.json
+    Returns:
+        json_data (dict): contains data from defaults.json for user's default settings
+    """
+    logger.info(f'Checking setup files...')
+    current_directory = os.getcwd()
+    if not os.path.exists(Path(current_directory, "output_files")):
+        print("\nNo output_files folder found, creating new one...", end='', flush=True)
+        current_directory = os.getcwd()
+        folder = "output_files"
+        source_path = os.path.join(current_directory, folder)
+        os.mkdir(source_path)
+        print("{} folder created\n".format(folder))
+
+
 if __name__ == "__main__":
     logger.info(f'GUI version info:\n{psg.get_versions()}')
     delete_log_files()
+    setup_files()
     run_gui()

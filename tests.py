@@ -1,6 +1,5 @@
 import unittest
 
-import gui
 from aspace import *
 from gui import *
 from spreadsheet import *
@@ -71,7 +70,7 @@ class TestGUIFunctions(unittest.TestCase):
 
     def test_aspace_login(self):
         test_defaults = {"as_api": ""}
-        close, as_instance, repos = gui.get_aspace_login(test_defaults)
+        close, as_instance, repos = get_aspace_login(test_defaults)
         self.assertIsInstance(as_instance, ASpace)
         self.assertIsInstance(close, bool)
         self.assertIsInstance(repos, dict)

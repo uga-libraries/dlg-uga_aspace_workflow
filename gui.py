@@ -48,7 +48,7 @@ def run_gui():
         sys.exit()
 
     column1 = [[psg.Text("Enter Barcodes or Top Container URIs:", font=("Roboto", 12))],
-               [psg.Multiline(key="_CONT_INPUT_", size=(37, 25), focus=True,
+               [psg.Multiline(key="_CONT_INPUT_", size=(37, 23), focus=True,
                               tooltip=' Enter top container barcodes or URIs here and separate either by comma or '
                                       'newline (enter) ')]]
 
@@ -59,10 +59,10 @@ def run_gui():
                 psg.Push(),
                 psg.Button(" SAVE ", key="_SAVE_REPO_")],
                [psg.FileBrowse(' Select ASpace>DLG Template ', file_types=(("Excel Files", "*.xlsx"),), ),
-                psg.InputText(default_text=defaults['_AS-DLG_FILE_'], size=(50, 5), key='_AS-DLG_FILE_')],
+                psg.InputText(default_text=defaults['_AS-DLG_FILE_'], size=(33, 5), key='_AS-DLG_FILE_')],
                [psg.Button(' START ', key='_WRITE_AOS_', disabled=False),
                 psg.Push(),
-                psg.Button(" Open ASpace > DLG Template File ", key="_OPEN_AS-DLG_", disabled=False)],
+                psg.Button(" Open Output Folder ", key="_OPEN_AS-DLG_", disabled=False)],
                [psg.Output(size=(60, 17), key="_OUTPUT_")]]
 
     layout = [[psg.Column(column1), psg.Column(column2)]]
@@ -142,10 +142,11 @@ def run_gui():
         #     main_window[f'{"_WRITE_AOS_"}'].update(disabled=False)
         #     main_window[f'{"_OPEN_AS-DLG_"}'].update(disabled=False)
         if main_event == "_OPEN_AS-DLG_":
-            if collection_file:
-                open_file(collection_file)
+            if os.path.exists(Path(os.getcwd(), "output_files")):
+                open_file(str(Path(os.getcwd(), "output_files")))
             else:
-                print("No file found")
+                print("No folder found")
+                logger.error(f'No output_files folder found - user initiated open folder')
 
 
 def get_aspace_login(defaults):
@@ -237,8 +238,8 @@ def write_aos(resource_links, selections, cancel, main_values, aspace_instance, 
                                                            resource_links[resource], template_file)
         else:
             for res_id, linked_object in resource_links.items():
-                row_num, collection_file = get_archres(res_id, ss_inst, row_num, aspace_instance, main_values, linked_objects,
-                                                       template_file)
+                row_num, collection_file = get_archres(res_id, ss_inst, row_num, aspace_instance, main_values,
+                                                       linked_objects, template_file)
     else:
         logger.info(f'User cancelled resource selection {resource_links.keys()}')
     # gui_window.write_event_value('-WAOS_THREAD-', (threading.current_thread().name,))

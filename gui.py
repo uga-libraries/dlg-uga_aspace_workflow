@@ -39,8 +39,6 @@ def run_gui():
     """
     # gc.disable()
     defaults = psg.UserSettings()
-    template_file = ""
-    collection_file = ""
     close_program, aspace_instance, repositories = get_aspace_login(defaults)
 
     if close_program is True:
@@ -70,7 +68,6 @@ def run_gui():
     main_window = psg.Window('ASpace > DLG Workflow', layout, resizable=True)
     logger.info('Initiate GUI window')
     while True:
-
         # gc.collect()
         main_event, main_values = main_window.Read()
         if main_event == 'Cancel' or main_event is None or main_event == "Exit":

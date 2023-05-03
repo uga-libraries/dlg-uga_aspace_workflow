@@ -89,12 +89,11 @@ class TestGUIFunctions(unittest.TestCase):
 
 class TestSpreadsheetFunctions(unittest.TestCase):
 
-    def test_get_barcodes(self):
-        test_spreadsheet = str(Path(os.getcwd(), "test_data/top containers.1674593882-test3.csv"))
-        test_barcodes, error = Spreadsheet.get_barcodes(test_spreadsheet)
-        self.assertGreaterEqual(len(test_barcodes), 0)
-        self.assertEqual(type(test_barcodes[0]), str)
-        self.assertEqual(type(error), str)
+    def test_sort_input(self):
+        test_input = "32108050893687,32108051113895,32108050892861"
+        sorted_results = Spreadsheet.sort_input(test_input)
+        self.assertGreaterEqual(len(sorted_results), 0)
+        self.assertEqual(type(sorted_results[0]), str)
 
     def test_get_cell_coordinate(self):
         coordinate = (1,1)

@@ -45,6 +45,8 @@ def run_gui():
         logger.info("User initiated closing program")
         sys.exit()
 
+    menu = [[]]  # TODO: Add menu with file and help as listed in #1
+
     column1 = [[psg.Text("Enter Barcodes or Top Container URIs:", font=("Roboto", 12))],
                [psg.Multiline(key="_CONT_INPUT_", size=(37, 23), focus=True,
                               tooltip=' Enter top container barcodes or URIs here and separate either by comma or '

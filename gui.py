@@ -14,6 +14,8 @@ import time
 from loguru import logger
 from pathlib import Path
 
+id_combined_regex = re.compile(r'[\W_]+', re.UNICODE)
+
 WRITE_AOS_THREAD = "-WAOS_THREAD-"
 GET_AOS_THREAD = "-GAOS_THREAD-"  # would have to figure out how to return linked_objects, archobjs_error in thread
 
@@ -328,10 +330,10 @@ def get_archres(res_id, ss_inst, row_num, aspace_instance, main_values, linked_o
     :return str collection_file: filepath for output file generated from template
     """
     if collid_regex.findall(res_id):
-        collnum = collid_regex.findall(res_id)[0]
+        clean_collnum = id_combined_regex.sub('', collid_regex.findall(res_id)[0])
     else:
-        collnum = res_id
-    dlg_id = f'guan_{collnum}'
+        clean_collnum = id_combined_regex.sub('', res_id)
+    dlg_id = f'guan_{clean_collnum}'
     resource_obj = aspace.ResourceObject()
     collection_file = ""
     for linked_object in linked_objects:

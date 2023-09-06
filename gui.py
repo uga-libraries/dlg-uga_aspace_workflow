@@ -32,8 +32,8 @@ def run_gui():
     """
     Handles the GUI operation as outlined by PySimpleGUI's guidelines.
 
-    For an in-depth review on how this code is structured, see the wiki:
-    https://github.com/uga-libraries/ASpace_Batch_Export-Cleanup-Upload/wiki/Code-Structure#run_gui
+    For an in-depth review on how this code is structured, see the PySimpleGUI User Manual:
+    https://www.pysimplegui.org/en/latest/#pysimplegui-users-manual
 
     # :param dict defaults: contains the data from defaults.json file, all data the user has specified as default
 

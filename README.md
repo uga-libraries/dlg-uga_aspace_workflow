@@ -1,4 +1,4 @@
-# ASpace > DLG Workflow
+# Overview
 
 This application takes an input of barcodes from top containers in ArchivesSpace, retrieves all the archival objects
 associated with those barcodes, parses the information and writes to a DLG approved spreadsheet template (also provided
@@ -24,29 +24,27 @@ the downloaded file.
 
 ### For Developers
 
-#### Prerequisites
-1. Install Python 3 on your computer. You can install python using the following link:
-https://www.python.org/downloads/
-2. Install packages as specified in requirements.txt
-3. Your ArchivesSpace Instance's API URL (plus port # ending, example: "https://localhost:8089, username, and password
-
-#### Installing
-1. Clone/Download or Fork the main branch
-2. Set up your virtual environment using the packages as specified in requirements.txt
-3. Run gui.py.
-4. I'm still building unittests and the data for the tests is locally dependent. If you want to use the unittests, 
+I'm still building unittests and the data for the tests is locally dependent. If you want to use the unittests, 
 create a "test_data" directory and create "resource.json" and "archival_object.json" files using a JSON formatted 
 resource and archival object from the ArchivesSpace API. Additionally, you'll need to swap the barcodes, repository 
 numbers, and resource/archival object dependent tests to reflect the data you have. Yes, I need to fix this to be
 universally acceptable.
 
-## Built With
-* [PySimpleGUI](https://github.com/PySimpleGUI/PySimpleGUI) - The GUI used
-* [ArchivesSnake](https://github.com/archivesspace-labs/ArchivesSnake) - Library used for interacting with the 
-ArchivesSpace API
-* [loguru](https://pypi.org/project/loguru/) - Logging package
-* [cx_Freeze](https://cx-freeze.readthedocs.io/en/latest/) - Generated the executable file
-* [Inno](https://jrsoftware.org/isinfo.php) - Generated Windows installer
+#### Dependencies
+- [PySimpleGUI](https://github.com/PySimpleGUI/PySimpleGUI) - The GUI used
+- [ArchivesSnake](https://github.com/archivesspace-labs/ArchivesSnake) - Library used for interacting with the ArchivesSpace API
+- [loguru](https://pypi.org/project/loguru/) - Logging package
+- [cx_Freeze](https://cx-freeze.readthedocs.io/en/latest/) - Generated the executable file
+- [Inno](https://jrsoftware.org/isinfo.php) - Generated Windows installer
+
+#### Installation
+1. Install Python 3 on your computer. You can install python using the following link:
+https://www.python.org/downloads/
+2. Download the repository via cloning to your local IDE or using GitHub's Code button and Download as ZIP
+3. Set up a virtual environment and run `pip install requirements.txt` 
+4. Make sure you have your ArchivesSpace Instance's API URL (plus port # ending, example: "https://localhost:8089, 
+username, and password
+5. Run the script `python3 gui.py`
 
 ## Contributing
 See the [CONTRIBUTING.md](CONTRIBUTING.md) for more information.
@@ -54,15 +52,15 @@ See the [CONTRIBUTING.md](CONTRIBUTING.md) for more information.
 ## Versioning
 Trying our best to adhere to [SemVer](https://semver.org/).
 
-## Authors
-* Corey Schmidt - Project Management Librarian/Archivist at the University of Georgia Libraries
-
 ## License Information
 
-This program is licensed under a Creative Commons Attribution Share Alike 4.0 International. Please see [LICENSE.txt](LICENSE.txt) for 
-more information.
+This program is licensed under a Creative Commons Attribution Share Alike 4.0 International. Please see 
+[LICENSE.txt](LICENSE.txt) for more information.
 
-### Special Thanks to:
-* Kevin Cottrell - GALILEO/Library Infrastructure Systems Architect at the University of Georgia Libraries
-* Kat Stein - Director of the Hargrett Rare Book and Manuscript Library
-* ArchivesSpace community
+# Authors
+- Corey Schmidt - Project Management Librarian/Archivist at the University of Georgia Libraries
+
+# Acknowledgements
+- Kevin Cottrell - GALILEO/Library Infrastructure Systems Architect at the University of Georgia Libraries
+- Kat Stein - Director of the Hargrett Rare Book and Manuscript Library
+- ArchivesSpace community

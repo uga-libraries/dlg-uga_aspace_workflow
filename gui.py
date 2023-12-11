@@ -169,13 +169,19 @@ def run_gui():
                                             "You will have to restart the program to see changes.")
             if reset_defaults == "Yes":
                 logger.info("User initiated reseting defaults")
+                defaults_dict = None
                 try:
-                    test = psg.UserSettings()  # TODO: https://www.pysimplegui.org/en/latest/call%20reference/#usersettings-api-class-interface
-                    defaults_dict = test.get_dict()
-                    print(defaults_dict)
+                    user_defaults = psg.UserSettings()
+                    defaults_dict = user_defaults.load()
+                    for setting in defaults_dict.keys():
+                        defaults_dict[setting] = None
+                    user_defaults.save()
                 except Exception as e:
-                    print(f'Error when resetting defaults: {e}')
-                    logger.error(f'Error when resetting defaults: {e}')
+                    print(f'Error when resetting defaults: {e}\n{defaults_dict}')
+                    logger.error(f'Error when resetting defaults: {e}\n{defaults_dict}')
+                else:
+                    print('User defaults reset successfully\n')
+                    logger.info(f'User reset defaults: {defaults_dict}')
         # ------------------- HELP -------------------
         if main_event == "About":
             logger.info(f'User initiated About menu option')

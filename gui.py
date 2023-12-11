@@ -10,6 +10,7 @@ import subprocess
 import sys
 import threading
 import time
+import webbrowser
 
 from loguru import logger
 from pathlib import Path
@@ -47,7 +48,20 @@ def run_gui():
         logger.info("User initiated closing program")
         sys.exit()
 
-    menu = [[]]  # TODO: Add menu with file and help as listed in #1
+    menu_opts = [['File',
+                 ['Clear Output Folder',
+                  '---',
+                  'Change ASpace Login Credentials',
+                  '---',
+                  'Reset Defaults',
+                  '---',
+                  'Exit']
+                  ],
+                 ['Help',
+                 ['User Manual',
+                  'About']
+                  ]
+                 ]
 
     column1 = [[psg.Text("Enter Barcodes or Top Container URIs:", font=("Roboto", 12))],
                [psg.Multiline(key="_CONT_INPUT_", size=(37, 23), focus=True,
@@ -67,7 +81,7 @@ def run_gui():
                 psg.Button(" Open Output Folder ", key="_OPEN_AS-DLG_", disabled=False)],
                [psg.Output(size=(60, 17), key="_OUTPUT_")]]
 
-    layout = [[psg.Column(column1), psg.Column(column2)]]
+    layout = [[psg.Menu(menu_opts)], [psg.Column(column1), psg.Column(column2)]]
 
     main_window = psg.Window('ASpace > DLG Workflow', layout, resizable=True)
     logger.info('Initiate GUI window')
@@ -148,6 +162,60 @@ def run_gui():
             else:
                 print("No folder found")
                 logger.error(f'No output_files folder found - user initiated open folder')
+        # ---------- MENU OPTIONS SECTION ------------
+        # ------------------- FILE -------------------
+        if main_event == "Reset Defaults":
+            reset_defaults = psg.PopupYesNo("You are about to reset your configurations. Are you sure? \n"
+                                            "You will have to restart the program to see changes.")
+            if reset_defaults == "Yes":
+                logger.info("User initiated reseting defaults")
+                try:
+                    test = psg.UserSettings()  # TODO: https://www.pysimplegui.org/en/latest/call%20reference/#usersettings-api-class-interface
+                    defaults_dict = test.get_dict()
+                    print(defaults_dict)
+                except Exception as e:
+                    print(f'Error when resetting defaults: {e}')
+                    logger.error(f'Error when resetting defaults: {e}')
+        # ------------------- HELP -------------------
+        if main_event == "About":
+            logger.info(f'User initiated About menu option')
+            window_about_active = True
+            layout_about = [
+                [psg.Text("Created by Corey Schmidt for the University of Georgia Libraries\n\n"
+                          "Version: DEVELOPMENT\n\n"
+                          "To check for the latest versions, check the Github\n", font=("Roboto", 12))],
+                [psg.OK(bind_return_key=True, key="_ABOUT_OK_"), psg.Button(" Check Github ", key="_CHECK_GITHUB_"),
+                 psg.Button(" Check GUI Info ", key="_CHECK_PYPSG_")]
+            ]
+            window_about = psg.Window("About this program", layout_about)
+            while window_about_active is True:
+                event_about, values_about = window_about.Read()
+                if event_about is None:
+                    window_about.close()
+                    window_about_active = False
+                if event_about == "_CHECK_GITHUB_":
+                    try:
+                        webbrowser.open("https://github.com/uga-libraries/dlg-uga_aspace_workflow/releases",
+                                        new=2)
+                    except Exception as e:
+                        print(f'Failed to open webbrowser: {e}')
+                        logger.error(f'Failed to open webbrowser: {e}')
+                if event_about == "_CHECK_PYPSG_":
+                    try:
+                        psg.popup_scrolled(psg.get_versions(), non_blocking=True, keep_on_top=True)
+                    except Exception as e:
+                        print(f'Failed to open PySimpleGUI versions popup: {e}')
+                        logger.error(f'Failed to open PySimpleGUI versions popup: {e}')
+                if event_about == "_ABOUT_OK_":
+                    window_about.close()
+                    window_about_active = False
+        if main_event == "User Manual":
+            try:
+                webbrowser.open("https://github.com/uga-libraries/dlg-uga_aspace_workflow/wiki/User-Manual",
+                                new=2)
+            except Exception as e:
+                print(f'Failed to open webbrowser: {e}')
+                logger.error(f'Failed to open webbrowser: {e}')
 
 
 def get_aspace_login(defaults):
@@ -427,7 +495,7 @@ def setup_files():
 
 
 if __name__ == "__main__":
-    logger.info(f'GUI version info:\n{psg.get_versions()}')
+    logger.info(f'GUI version info:\n{"Version Number: DEVELOPMENT"}\n{psg.get_versions()}')
     delete_log_files()
     setup_files()
     run_gui()

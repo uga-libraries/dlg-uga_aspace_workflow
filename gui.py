@@ -148,6 +148,7 @@ def run_gui():
                                     row_num, collection_file = write_aos(resource_links, selections, cancel,
                                                                          main_values, aspace_instance, linked_objects,
                                                                          row_num, ss_inst, template_file, main_window)
+                                    print(row_num)
                                     # start_thread(write_aos, args, main_window)  # TODO - when there are multiple barcodes, multiple threads are created and write over each other - causing the errors!
                                     # logger.info("WRITE_AOS_THREAD started")  # TODO - change GUI to take in raw input of barcodes or top container URIs like in ASpace batch exporter w/resource ids
                             logger.info(f'Finished {str(row_num - 2)} exports')
@@ -164,6 +165,10 @@ def run_gui():
                 logger.error(f'No output_files folder found - user initiated open folder')
         # ---------- MENU OPTIONS SECTION ------------
         # ------------------- FILE -------------------
+        if main_event == "Clear Output Folder":
+            clear_exports(str(Path(os.getcwd(), "output_files")))
+        if main_event == "Change ASpace Login Credentials":
+            get_aspace_login(defaults)
         if main_event == "Reset Defaults":
             reset_defaults = psg.PopupYesNo("You are about to reset your configurations. Are you sure? \n"
                                             "You will have to restart the program to see changes.")
@@ -466,6 +471,39 @@ def delete_log_files():  # unittest for this? how?
                     logger.info(f'Removed logfile: {logfile}')
                 except Exception as delete_log_error:
                     logger.error(f'Error deleting logfile {logfile}:\n{delete_log_error}')
+
+
+def clear_exports(folder_path):
+    """
+    Takes user input to open specified directory for exported files.
+
+    Args:
+        folder_path (str): the key to the folder path found in the defaults.json file, ex. _OUTPUT_DIR_
+
+    Returns:
+        None
+    """
+    logger.info(f'Clearing output directory: {folder_path}')
+    clean_files = os.listdir(folder_path)
+    try:
+        if len(clean_files) > 0:
+            file_count = 0
+            for file in clean_files:
+                file_count += 1
+                full_path = str(Path(folder_path, file))
+                if not os.path.isdir(full_path):
+                    os.remove(full_path)
+                else:
+                    file_count -= 1
+                    print(f'Could not remove item: {file} from {folder_path}')
+                    logger.info(f'Could not remove item: {file} from {folder_path}')
+            print(f'Deleted {str(file_count)} files in {folder_path}')
+            logger.info(f'Deleted {file_count} files in {folder_path}')
+        else:
+            print(f'No files in {folder_path}\n')
+    except Exception as e:
+        print(f'Error deleting files from {folder_path}\n' + str(e))
+        logger.error(f'Error deleting files from {folder_path}: {e}')
 
 
 def start_thread(function, args, gui_window):

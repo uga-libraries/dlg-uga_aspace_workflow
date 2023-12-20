@@ -112,13 +112,14 @@ def run_gui():
                         psg.Popup(f'Could not open:\n{main_values["_AS-DLG_FILE_"]}\n\n'
                                   f'Make sure to close the spreadsheet before continuing')
                     else:
+                        defaults["_AS-DLG_FILE_"] = main_values["_AS-DLG_FILE_"]
                         try:
                             template_file = shutil.copy(main_values["_AS-DLG_FILE_"], str(Path(os.getcwd(),
-                                                                                           "output_files")))
+                                                                                          "output_files")))
                         except OSError as e:
                             logger.info(f'Tried copying template file, error thrown: {e}')
-                            template_file = str(Path(os.getcwd(), "output_files", Path(main_values["_AS-DLG_FILE_"]).name))
-                        defaults["_AS-DLG_FILE_"] = template_file
+                            template_file = str(Path(os.getcwd(), "output_files", Path(main_values[
+                                                                                           "_AS-DLG_FILE_"]).name))
                         ss_inst = spreadsheet.Spreadsheet
                         try:
                             barcodes = ss_inst.sort_input(main_values['_CONT_INPUT_'])
@@ -135,10 +136,22 @@ def run_gui():
                                 #     for message in tc_uri:
                                 #         print(message)
                                 # else:
-                                linked_objects, archobjs_error = aspace_instance.get_archobjs(barcode, repositories[main_values["_REPO_SELECT_"]])
+                                linked_objects, archobjs_error = aspace_instance.get_archobjs(barcode,
+                                                                                              repositories[
+                                                                                                  main_values[
+                                                                                                      "_REPO_SELECT_"]])
                                 if archobjs_error:
                                     logger.error(f'get_archobjs ERROR: {archobjs_error}')
                                     print(archobjs_error)
+                                elif not linked_objects:
+                                    print(f'\nNo archival objects associated with {barcode}\n')
+                                    logger.info(f'\nNo archival objects associated with {barcode}\n')
+                                    if len(barcodes) <= 1:
+                                        try:
+                                            os.remove(template_file)
+                                        except OSError as e:
+                                            logger.error(f'Failed to delete file: {template_file}\n'
+                                                         f'Error: {e}')
                                 else:
                                     resource_links, selections, cancel = parse_linked_objs(linked_objects,
                                                                                            aspace_instance)
@@ -148,12 +161,13 @@ def run_gui():
                                     row_num, collection_file = write_aos(resource_links, selections, cancel,
                                                                          main_values, aspace_instance, linked_objects,
                                                                          row_num, ss_inst, template_file, main_window)
-                                    print(row_num)
-                                    # start_thread(write_aos, args, main_window)  # TODO - when there are multiple barcodes, multiple threads are created and write over each other - causing the errors!
-                                    # logger.info("WRITE_AOS_THREAD started")  # TODO - change GUI to take in raw input of barcodes or top container URIs like in ASpace batch exporter w/resource ids
+                                    # start_thread(write_aos, args, main_window)  # When there are multiple barcodes, multiple threads are created and write over each other - causing the errors!
+                                    # logger.info("WRITE_AOS_THREAD started")
                             logger.info(f'Finished {str(row_num - 2)} exports')
-                            trailing_line = 56 - len(f'Finished {str(row_num - 2)} exports') - (len(str(row_num - 2)) - 1)
-                            print("\n" + "-" * 40 + "Finished {} exports".format(str(row_num - 2)) + "-" * trailing_line + "\n")
+                            trailing_line = 56 - len(f'Finished {str(row_num - 2)} exports') - (len(str(row_num - 2)) -
+                                                                                                1)
+                            print("\n" + "-" * 40 + "Finished {} exports".format(str(row_num - 2)) + "-" *
+                                  trailing_line + "\n")
         # if main_event in (WRITE_AOS_THREAD):
         #     main_window[f'{"_WRITE_AOS_"}'].update(disabled=False)
         #     main_window[f'{"_OPEN_AS-DLG_"}'].update(disabled=False)

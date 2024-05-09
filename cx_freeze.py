@@ -16,4 +16,4 @@ setup(
     version="1.0",
     description="ArchivesSpace to DLG template workflow",
     options={"build_exe": build_exe_options},
-    executables=[Executable("gui.py", base=base, targetName="ASpace_DLG_workflow_vRELEASEVERSIONNUMBERNODOTS.exe")])
+    executables=[Executable("gui.py", base=base, target_name="ASpace_DLG_workflow_vRELEASEVERSIONNUMBERNODOTS.exe")])

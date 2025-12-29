@@ -1,5 +1,5 @@
 ArchivesSnake == 0.10.1
-cx_Freeze == 8.4.1
+cx_Freeze == 8.5.2
 loguru == 0.7.3
 requests == 2.32.5
 openpyxl == 3.1.5
